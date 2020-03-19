@@ -5,7 +5,7 @@ import rospy
 import actionlib
 from std_msgs.msg import Float64, Float32
 
-from wolf_actions.msg import submerge_secondsAction
+from wolf_actions.msg import submerge_secondsAction, submerge_secondsResult
 
 class Submerge_Seconds:
 	def __init__(self):
@@ -19,9 +19,11 @@ class Submerge_Seconds:
 		while not rospy.is_shutdown() and rospy.get_time() < initial_time + goal.seconds_goal:
 			vert_pub.publish(-0.2)
 			rate.sleep()
-
 		vert_pub.publish(0.0)
 
+		result = submerge_secondsResult()
+		result.seconds_complete = goal.seconds_goal
+		self.server.set_succeeded(result)
 
 if __name__ == '__main__':
 	rospy.init_node('submerge_seconds_server')
