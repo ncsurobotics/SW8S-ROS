@@ -14,6 +14,10 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
+find_package(catkin REQUIRED genmsg actionlib_msgs)
+add_action_files(DIRECTORY action FILES submerge_seconds.action)
+generate_messages(DEPENDENCIES actionlib_msgs)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
