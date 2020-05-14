@@ -1,0 +1,6 @@
+<launch>
+  <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" />
+  <node name="drive_seconds_server" pkg="wolf_actions" type="drive_seconds_server.py" />
+  <node name="submerge_seconds_server" pkg="wolf_actions" type="submerge_seconds_server.py" />
+  <node name="fake_mission" pkg="wolf_actions" type="dummy_client.py" />
+</launch>
