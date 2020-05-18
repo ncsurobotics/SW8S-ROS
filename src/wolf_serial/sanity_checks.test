@@ -1,0 +1,4 @@
+<launch>
+  <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" />
+    <test test-name="test_pixhawk" pkg="wolf_serial" type="test_pixhawk.py" />
+</launch>
