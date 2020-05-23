@@ -4,7 +4,7 @@ import roslib
 roslib.load_manifest('wolf_actions')
 import rospy
 import actionlib
-from geometry_msgs.msg import Twist
+from std_msgs.msg import Float64
 from wolf_actions.msg import submerge_secondsAction, submerge_secondsResult
 
 
@@ -14,16 +14,13 @@ class Submerge_Seconds:
         self.server.start()
 
     def execute(self, goal):
-        twist = Twist()
         rate = rospy.Rate(20)
         initial_time = rospy.get_time()
-        twist_pub = rospy.Publisher('wolf_twist', Twist, queue_size=10)
+        vert_pub = rospy.Publisher('wolf_vertical', Float64, queue_size=10)
         while not rospy.is_shutdown() and rospy.get_time() < initial_time + goal.seconds_goal:
-            twist.linear.z = -0.2
-            twist_pub.publish(twist)
+            vert_pub.publish(-0.2)
             rate.sleep()
-        twist.linear.z = 0.0
-        twist_pub.publish(twist)
+        vert_pub.publish(0.0)
 
         result = submerge_secondsResult()
         result.seconds_complete = goal.seconds_goal
