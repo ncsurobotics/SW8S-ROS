@@ -4,7 +4,8 @@ import rospy
 import mavros
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import Imu
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Float64
 from mavros_msgs.msg import OverrideRCIn
 
 
@@ -45,11 +46,14 @@ class Pixhawk:
         self.forward_rate = value_map(data.linear.x, -1.0, 1.0, 1000, 2000)
         self.strafe_rate = value_map(data.linear.y, -1.0, 1.0, 1000, 2000)
 
-    def imu_callback(self, data):
+    def pose_callback(self, data):
         euler = Vector3()
-        euler.x, euler.y, euler.z = quaternion_to_euler(data.orientation.x, data.orientation.y, data.orientation.z,
-                                                        data.orientation.w)
+        orientation = data.pose.orientation
+        euler.x, euler.y, euler.z = quaternion_to_euler(orientation.x, orientation.y, orientation.z,
+                                                        orientation.w)
+        depth = data.pose.position.z
         self.imu_pub.publish(euler)
+        self.depth_pub.publish(depth)
 
     def __init__(self):
         rospy.init_node('pixhawk', anonymous=False)
@@ -59,9 +63,9 @@ class Pixhawk:
         rc = OverrideRCIn()
         self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
         self.imu_pub = rospy.Publisher("wolf_imu_euler", Vector3, queue_size=10)
-
+        self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
         rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
-        rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
+        rospy.Subscriber("mavros/local_position/pose", PoseStamped, self.pose_callback)
 
         while not rospy.is_shutdown():
             rc.channels[0] = self.pitch_rate
