@@ -14,7 +14,7 @@
         <param name="max_loop_frequency" value="10.0" />
         <param name="min_loop_frequency" value="10.0" /> -->
         <param name="topic_from_controller" value="depth_control_output" />
-        <param name="topic_from_plant" value="wolf_imu_euler/z" />
+        <param name="topic_from_plant" value="wolf_depth" />
         <param name="setpoint_topic" value="depth_setpoint" />
         <param name="setpoint_timeout" value="-1" />
 

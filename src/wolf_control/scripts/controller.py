@@ -3,8 +3,7 @@ import rospy
 from geometry_msgs.msg import Vector3, Twist
 from std_msgs.msg import Float64
 
-class Controller:
-    
+class Controller:   
     twist_state = Twist()
 #    yaw_control_out = 0.0
     depth_control_out = 0.0
@@ -13,7 +12,7 @@ class Controller:
         self.depth_set_pub.publish(twist.linear.z)
 
     def depth_control_callback(self, controller_output):
-        self.depth_control_out = controller_output
+        self.depth_control_out = controller_output.data
 
     def __init__(self):
         rospy.init_node('controller', anonymous=False)
@@ -40,3 +39,5 @@ class Controller:
             self.twist_pub.publish(twist_out)
             rate.sleep()
 
+if __name__ == '__main__':
+    controller = Controller()
