@@ -27,7 +27,13 @@ def quaternion_to_euler(x, y, z, w):
 
 
 def value_map(value, istart, istop, ostart, ostop):
-    return ostart + (ostop - ostart) * ((value - istart) / (istop - istart))
+    val = ostart + (ostop - ostart) * ((value - istart) / (istop - istart))
+    if val >= ostop:
+        return ostop
+    if val <= ostart:
+        return ostart
+
+    return val
 
 
 class Pixhawk:

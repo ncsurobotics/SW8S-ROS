@@ -3,78 +3,93 @@
 import rospy
 import mavros
 from mavros_msgs.msg import OverrideRCIn
-from std_msgs.msg import Float64
+from geometry_msgs.msg import Twist
 import unittest
 
 
 class PixhawkTest(unittest.TestCase):
 
     def test_vertical_rate(self):
-        pub = rospy.Publisher("wolf_vertical", Float64, queue_size=10)
+        pub = rospy.Publisher("wolf_twist", Twist, queue_size=10)
 
         vertical_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
         vertical_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
+        twist_out = Twist()
 
-        pub.publish(0.1)
+        twist_out.linear.z = 0.1
+        pub.publish(twist_out)
         vertical_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[2]
         self.assertEqual(vertical_rate, 1550.0, "PIXHAWK NODE: RC rate does not match sent rate, was {} should be {}".format(vertical_rate, 1550))
 
-        pub.publish(-0.1)
+        twist_out.linear.z = -0.1
+        pub.publish(twist_out)
         vertical_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[2]
         self.assertEqual(vertical_rate, 1450.0, "PIXHAWK NODE: RC rate does not match sent rate, was {} should be {}".format(vertical_rate, 1450))
 
-        pub.publish(1000)
+        twist_out.linear.z = 1000
+        pub.publish(twist_out)
         vertical_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[2]
         self.assertEqual(vertical_rate, 2000.0, "PIXHAWK NODE: inputting rate > 1.0 results in bad RC rate")
 
-        pub.publish(-1000)
+        twist_out.linear.z = -1000
+        pub.publish(twist_out)
         vertical_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[2]
         self.assertEqual(vertical_rate, 1000.0, "PIXHAWK NODE: inputting rate < 1.0 results in bad RC rate")
 
     def test_lateral_rate(self):
-        pub = rospy.Publisher("wolf_lateral", Float64, queue_size=10)
+        pub = rospy.Publisher("wolf_twist", Twist, queue_size=10)
 
         lateral_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
         lateral_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
+        twist_out = Twist()
 
-        pub.publish(0.1)
+        twist_out.linear.x = 0.1
+        pub.publish(twist_out)
         lateral_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[4]
         self.assertEqual(lateral_rate, 1550.0, "PIXHAWK NODE: RC rate does not match sent rate, was {} should be {}".format(lateral_rate, 1550))
 
-        pub.publish(-0.1)
+        twist_out.linear.x = -0.1
+        pub.publish(twist_out)
         lateral_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[4]
         self.assertEqual(lateral_rate, 1450.0, "PIXHAWK NODE: RC rate does not match sent rate, was {} should be {}".format(lateral_rate, 1450))
 
-        pub.publish(1000)
+        twist_out.linear.x = 1000
+        pub.publish(twist_out)
         lateral_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[4]
         self.assertEqual(lateral_rate, 2000.0, "PIXHAWK NODE: inputting rate > 1.0 results in bad RC rate")
 
-        pub.publish(-1000)
+        twist_out.linear.x = -1000
+        pub.publish(twist_out)
         lateral_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[4]
         self.assertEqual(lateral_rate, 1000.0, "PIXHAWK NODE: inputting rate < 1.0 results in bad RC rate")
 
 
-    def test_rotation_rate(self):
-        pub = rospy.Publisher("wolf_rotation", Float64, queue_size=10)
+    def test_yaw_rate(self):
+        pub = rospy.Publisher("wolf_twist", Twist, queue_size=10)
 
-        rotation_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
-        rotation_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
+        yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
+        yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
+        twist_out = Twist()
 
-        pub.publish(0.1)
-        rotation_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[3]
-        self.assertEqual(rotation_rate, 1550.0, "PIXHAWK NODE: RC rate does not match sent rate, was {} should be {}".format(rotation_rate, 1550))
+        twist_out.angular.z = 0.1
+        pub.publish(twist_out)
+        yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[3]
+        self.assertEqual(yaw_rate, 1550.0, "PIXHAWK NODE: RC rate does not match sent rate, was {} should be {}".format(yaw_rate, 1550))
 
-        pub.publish(-0.1)
-        rotation_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[3]
-        self.assertEqual(rotation_rate, 1450.0, "PIXHAWK NODE: RC rate does not match sent rate, was {} should be {}".format(rotation_rate, 1450))
+        twist_out.angular.z = -0.1
+        pub.publish(twist_out)
+        yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[3]
+        self.assertEqual(yaw_rate, 1450.0, "PIXHAWK NODE: RC rate does not match sent rate, was {} should be {}".format(yaw_rate, 1450))
 
-        pub.publish(1000)
-        rotation_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[3]
-        self.assertEqual(rotation_rate, 2000.0, "PIXHAWK NODE: inputting rate > 1.0 results in bad RC rate")
+        twist_out.angular.z = 1000
+        pub.publish(twist_out)
+        yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[3]
+        self.assertEqual(yaw_rate, 2000.0, "PIXHAWK NODE: inputting rate > 1.0 results in bad RC rate")
 
-        pub.publish(-1000)
-        rotation_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[3]
-        self.assertEqual(rotation_rate, 1000.0, "PIXHAWK NODE: inputting rate < 1.0 results in bad RC rate")
+        twist_out.angular.z = -1000
+        pub.publish(twist_out)
+        yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn).channels[3]
+        self.assertEqual(yaw_rate, 1000.0, "PIXHAWK NODE: inputting rate < 1.0 results in bad RC rate")
 
 if __name__ == '__main__':
     import rosunit
