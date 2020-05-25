@@ -48,8 +48,7 @@ def talker():
         dummy.linear.z = -3.0
         dummy.angular.x = 0.0
         dummy.angular.y = 0.0
-        dummy.angular.z = 0.0
-
+        dummy.angular.z = 90.0
         rospy.loginfo(dummy)
         pub.publish(dummy)
         rate.sleep()

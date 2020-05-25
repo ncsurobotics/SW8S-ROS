@@ -2,7 +2,7 @@
 
 <launch>
 
-<!--    <node name="wolf_control" pkg="wolf_control" type="controller.py"/> -->
+    <node name="wolf_control" pkg="wolf_control" type="controller.py"/>
 
     <node name="depth_pid" pkg="pid" type="controller" >
         <param name="Kp" value="0.3" />
@@ -10,29 +10,29 @@
         <param name="Kd" value="0.0" />
         <param name="upper_limit" value="1.0" />
         <param name="lower_limit" value="-1.0" />
-<!--        <param name="windup_limit" value="10" />
+        <param name="windup_limit" value="10" />
         <param name="max_loop_frequency" value="10.0" />
-        <param name="min_loop_frequency" value="10.0" /> -->
+        <param name="min_loop_frequency" value="10.0" />
         <param name="topic_from_controller" value="wolf_control/depth_output" />
         <param name="topic_from_plant" value="wolf_depth" />
         <param name="setpoint_topic" value="wolf_control/depth_setpoint" />
         <param name="setpoint_timeout" value="-1" />
 
     </node>
-
     <node name="yaw_pid" pkg="pid" type="controller" >
-        <param name="Kp" value="0.005" />
+        <param name="Kp" value="-0.05" />
         <param name="Ki" value="0.0" />
-        <param name="Kd" value="0.0" />
+        <param name="Kd" value="-0.005" />
         <param name="upper_limit" value="1.0" />
         <param name="lower_limit" value="-1.0" />
 <!--        <param name="windup_limit" value="10" />
         <param name="max_loop_frequency" value="10.0" />
         <param name="min_loop_frequency" value="10.0" /> -->
         <param name="topic_from_controller" value="wolf_control/yaw_output" />
-        <param name="topic_from_plant" value="wolf_control/yaw" />
+        <param name="topic_from_plant" value="wolf_yaw" />
         <param name="setpoint_topic" value="wolf_control/yaw_setpoint" />
-        <param name="angle_error" value="true" />
+        <param name="angle_error" value="false" />
+        <param name="angle_wrap" value="2.0*180" />
         <param name="setpoint_timeout" value="-1" />
 
     </node>

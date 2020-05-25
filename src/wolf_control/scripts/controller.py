@@ -11,6 +11,7 @@ class Controller:
 
     def twist_callback(self, twist):
         self.depth_set_pub.publish(twist.linear.z)
+        self.yaw_set_pub.publish(twist.angular.z)
 
     def imu_callback(self, orientation):
         self.yaw = orientation.z
@@ -25,8 +26,6 @@ class Controller:
         rospy.init_node('controller', anonymous=False)
         rate = rospy.Rate(20)
         
-        self.yaw_state_pub = rospy.Publisher("wolf_control/yaw_state", Float64, queue_size=10)
-
         rospy.Subscriber("wolf_imu_euler", Vector3, self.imu_callback)
         rospy.Subscriber("wolf_twist_setpoint", Twist, self.twist_callback)
         self.yaw_set_pub = rospy.Publisher("wolf_control/yaw_setpoint", Float64, queue_size=10)
