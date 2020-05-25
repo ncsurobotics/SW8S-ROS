@@ -1,4 +1,6 @@
 <launch>
-  <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" />
-    <test test-name="test_pixhawk" pkg="wolf_serial" type="test_pixhawk.py" />
+  <arg name="fcu_url" default="udp://0.0.0.0:14550@" />
+  <include file="/opt/ros/melodic/share/mavros/launch/apm.launch" pass_all_args="true" />
+  <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" launch-prefix="bash -c 'sleep 2.0; $0 $@' "/>
+  <test test-name="test_pixhawk" pkg="wolf_serial" type="test_pixhawk.py" launch-prefix="bash -c 'sleep 3.0; $0 $@' "/>
 </launch>

@@ -2,6 +2,7 @@
 import math
 import rospy
 import mavros
+import numpy as np
 from std_msgs.msg import Float64
 from geometry_msgs.msg import Vector3
 from sensor_msgs.msg import Imu
@@ -36,12 +37,24 @@ class Pixhawk:
 
     def vertical_callback(self, data):
         self.vertical_rate = value_map(data.data, -1.0, 1.0, 1000, 2000)
+        if data.data >= 1.0:
+            self.vertical_rate = 2000
+        if data.data <= -1.0:
+            self.vertical_rate = 1000
 
     def lateral_callback(self, data):
         self.lateral_rate = value_map(data.data, -1.0, 1.0, 1000, 2000)
+        if data.data >= 1.0:
+            self.lateral_rate = 2000
+        if data.data <= -1.0:
+            self.lateral_rate = 1000
 
     def rotation_callback(self, data):
         self.rotation_rate = value_map(data.data, -1.0, 1.0, 1000, 2000)
+        if data.data >= 1.0:
+            self.rotation_rate = 2000
+        if data.data <= -1.0:
+            self.rotation_rate = 1000
 
     def imu_callback(self, data):
         euler = Vector3()
@@ -54,6 +67,7 @@ class Pixhawk:
         rate = rospy.Rate(20)
         mavros.set_namespace()
 
+        print(mavros.get_topic("rc", "override"))
         rc = OverrideRCIn()
         self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
         self.imu_pub = rospy.Publisher("wolf_imu_euler", Vector3, queue_size=10)
@@ -64,9 +78,10 @@ class Pixhawk:
         rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
 
         while not rospy.is_shutdown():
-            rc.channels[2] = self.vertical_rate
-            rc.channels[3] = self.rotation_rate
-            rc.channels[4] = self.lateral_rate
+            rc.channels[2] = int(self.vertical_rate)
+            rc.channels[3] = int(self.rotation_rate)
+            rc.channels[4] = int(self.lateral_rate)
+            rc.channels = np.array(rc.channels).astype(np.uint16)
             self.override_pub.publish(rc)
             rate.sleep()
 
