@@ -1,6 +1,9 @@
 <launch>
-  <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" />
-  <node name="drive_seconds_server" pkg="wolf_actions" type="drive_seconds_server.py" />
-  <node name="submerge_seconds_server" pkg="wolf_actions" type="submerge_seconds_server.py" />
-  <node name="fake_mission" pkg="wolf_actions" type="dummy_client.py" />
+  <arg name="fcu_url" default="udp://0.0.0.0:14550@" />
+  <include file="/opt/ros/melodic/share/mavros/launch/apm.launch" pass_all_args="true" />
+  <arg name="node_start_delay" default="1.0" />
+  <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+  <node name="drive_seconds_server" pkg="wolf_actions" type="drive_seconds_server.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+  <node name="submerge_seconds_server" pkg="wolf_actions" type="submerge_seconds_server.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+  <node name="fake_mission" pkg="wolf_actions" type="dummy_client.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
 </launch>
