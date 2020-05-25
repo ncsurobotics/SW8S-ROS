@@ -2,10 +2,10 @@
 import math
 import rospy
 import mavros
-import numpy as np
-from std_msgs.msg import Float64
 from geometry_msgs.msg import Vector3
-from sensor_msgs.msg import Imu
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Float64
 from mavros_msgs.msg import OverrideRCIn
 
 
@@ -31,57 +31,49 @@ def value_map(value, istart, istop, ostart, ostop):
 
 
 class Pixhawk:
+    pitch_rate = 0.0
+    roll_rate = 0.0
     vertical_rate = 0.0
-    lateral_rate = 0.0
-    rotation_rate = 0.0
+    yaw_rate = 0.0
+    forward_rate = 0.0
+    strafe_rate = 0.0
 
-    def vertical_callback(self, data):
-        self.vertical_rate = value_map(data.data, -1.0, 1.0, 1000, 2000)
-        if data.data >= 1.0:
-            self.vertical_rate = 2000
-        if data.data <= -1.0:
-            self.vertical_rate = 1000
+    def twist_callback(self, data):
+        self.pitch_rate = value_map(data.angular.y, -1.0, 1.0, 1000, 2000) 
+        self.roll_rate = value_map(data.angular.x, -1.0, 1.0, 1000, 2000)
+        self.vertical_rate = value_map(data.linear.z, -1.0, 1.0, 1000, 2000)
+        self.yaw_rate = value_map(data.angular.z, -1.0, 1.0, 1000, 2000)
+        self.forward_rate = value_map(data.linear.x, -1.0, 1.0, 1000, 2000)
+        self.strafe_rate = value_map(data.linear.y, -1.0, 1.0, 1000, 2000)
 
-    def lateral_callback(self, data):
-        self.lateral_rate = value_map(data.data, -1.0, 1.0, 1000, 2000)
-        if data.data >= 1.0:
-            self.lateral_rate = 2000
-        if data.data <= -1.0:
-            self.lateral_rate = 1000
-
-    def rotation_callback(self, data):
-        self.rotation_rate = value_map(data.data, -1.0, 1.0, 1000, 2000)
-        if data.data >= 1.0:
-            self.rotation_rate = 2000
-        if data.data <= -1.0:
-            self.rotation_rate = 1000
-
-    def imu_callback(self, data):
+    def pose_callback(self, data):
         euler = Vector3()
-        euler.x, euler.y, euler.z = quaternion_to_euler(data.orientation.x, data.orientation.y, data.orientation.z,
-                                                        data.orientation.w)
+        orientation = data.pose.orientation
+        euler.x, euler.y, euler.z = quaternion_to_euler(orientation.x, orientation.y, orientation.z,
+                                                        orientation.w)
+        depth = data.pose.position.z
         self.imu_pub.publish(euler)
+        self.depth_pub.publish(depth)
 
     def __init__(self):
         rospy.init_node('pixhawk', anonymous=False)
         rate = rospy.Rate(20)
         mavros.set_namespace()
 
-        print(mavros.get_topic("rc", "override"))
         rc = OverrideRCIn()
         self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
         self.imu_pub = rospy.Publisher("wolf_imu_euler", Vector3, queue_size=10)
-
-        rospy.Subscriber("wolf_vertical", Float64, self.vertical_callback)
-        rospy.Subscriber("wolf_lateral", Float64, self.lateral_callback)
-        rospy.Subscriber("wolf_rotation", Float64, self.rotation_callback)
-        rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
+        self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
+        rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
+        rospy.Subscriber("mavros/local_position/pose", PoseStamped, self.pose_callback)
 
         while not rospy.is_shutdown():
-            rc.channels[2] = int(self.vertical_rate)
-            rc.channels[3] = int(self.rotation_rate)
-            rc.channels[4] = int(self.lateral_rate)
-            rc.channels = np.array(rc.channels).astype(np.uint16)
+            rc.channels[0] = self.pitch_rate
+            rc.channels[1] = self.roll_rate
+            rc.channels[2] = self.vertical_rate
+            rc.channels[3] = self.yaw_rate
+            rc.channels[4] = self.forward_rate
+            rc.channels[5] = self.strafe_rate
             self.override_pub.publish(rc)
             rate.sleep()
 
