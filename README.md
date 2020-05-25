@@ -12,3 +12,7 @@ The following is a list of major ROS topics in this project organized by the pac
     * contains Float64 messages that determine the yaw velocity of the sub, accepts parameters from -1 to 1, where 1 is the maximum clockwise thrust and vice versa
 * wolf_imu_euler
     * contains Vector3 messages that describe the subs orientation using euler angles
+    
+    
+## Launching in simulation
+Please see the wiki for how to install proper simulation software, once it is installed edit the "dir" var in "parallel_start.sh" to reflect where all the software is on your system, then this script can be run to start the simulation 
