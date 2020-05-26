@@ -15,4 +15,4 @@ The following is a list of major ROS topics in this project organized by the pac
     
     
 ## Launching in simulation
-Please see the wiki for how to install proper simulation software, once it is installed edit the "dir" var in "parallel_start.sh" to reflect where all the software is on your system, then this script can be run to start the simulation 
+Please see the wiki for how to install proper simulation software, once it is installed set the system var SW8_SOFTWARE_DIR to point to where you installed all of your software. Now you can run the bash script "parallel_start.sh" to start the simulation, this will run the "seawolf8.launch" file by default
