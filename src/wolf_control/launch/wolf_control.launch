@@ -31,8 +31,8 @@
         <param name="topic_from_controller" value="wolf_control/yaw_output" />
         <param name="topic_from_plant" value="wolf_yaw" />
         <param name="setpoint_topic" value="wolf_control/yaw_setpoint" />
-        <param name="angle_error" value="false" />
-        <param name="angle_wrap" value="2.0*180" />
+        <param name="angle_error" value="true" />
+        <param name="angle_wrap" value="360.0" />
         <param name="setpoint_timeout" value="-1" />
 
     </node>
