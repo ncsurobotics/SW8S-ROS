@@ -38,7 +38,7 @@ import rospy
 from geometry_msgs.msg import Twist
 
 def talker():
-    pub = rospy.Publisher('twist_setpoint', Twist, queue_size=10)
+    pub = rospy.Publisher('wolf_twist_setpoint', Twist, queue_size=10)
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
@@ -48,8 +48,7 @@ def talker():
         dummy.linear.z = -3.0
         dummy.angular.x = 0.0
         dummy.angular.y = 0.0
-        dummy.angular.z = 0.0
-
+        dummy.angular.z = 90.0
         rospy.loginfo(dummy)
         pub.publish(dummy)
         rate.sleep()

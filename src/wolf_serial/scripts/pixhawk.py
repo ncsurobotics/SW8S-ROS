@@ -60,6 +60,7 @@ class Pixhawk:
         depth = data.pose.position.z
         self.imu_pub.publish(euler)
         self.depth_pub.publish(depth)
+        self.yaw_pub.publish(euler.z)
 
     def __init__(self):
         rospy.init_node('pixhawk', anonymous=False)
@@ -69,6 +70,7 @@ class Pixhawk:
         rc = OverrideRCIn()
         self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
         self.imu_pub = rospy.Publisher("wolf_imu_euler", Vector3, queue_size=10)
+        self.yaw_pub = rospy.Publisher("wolf_yaw", Float64, queue_size=10) # Duplicating yaw publishers for now with IMU for PID node
         self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
         rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
         rospy.Subscriber("mavros/local_position/pose", PoseStamped, self.pose_callback)
