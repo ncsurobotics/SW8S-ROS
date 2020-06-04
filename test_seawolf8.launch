@@ -8,7 +8,6 @@
   <node name="set_mode" pkg="mavros" type="mavsys" args="mode -c ALT_HOLD" launch-prefix="bash -c 'sleep 11.0; $0 $@' "/>
   <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
   <node name="dummypub" pkg="wolf_control" type="dummypub.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
-  <node name="oracle" pkg="wolf_control" type="depth_mission_oracle.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
 </launch>
 
 
