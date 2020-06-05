@@ -16,7 +16,7 @@ source $dir/Seawolf-8-Software/devel/setup.bash
 sleep 5
 
 {
-	exec rostest wolf_control test_pose.test
+	exec rostest wolf_control test_pose.test --text
 } &
 
 {
