@@ -5,7 +5,7 @@ trap 'kill 0; pkill gzserver; pkill gzclient' EXIT
 
 dir=${SW8_SOFTWARE_DIR-}
 
-source /root/.bashrc
+source /root/.profile
 source $dir/Seawolf-8-Software/devel/setup.bash
 
 # Start all processes with & at the end
