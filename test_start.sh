@@ -6,7 +6,7 @@ trap 'kill 0; pkill gzserver; pkill gzclient' EXIT
 dir=${SW8_SOFTWARE_DIR-}
 
 source $dir/Seawolf-8-Software/devel/setup.bash
-
+source /root/.bashrc
 # Start all processes with & at the end
 {
 	cd $dir/bluerov_ros_playground
