@@ -11,7 +11,7 @@ source $dir/Seawolf-8-Software/devel/setup.bash
 {
 	cd $dir/bluerov_ros_playground
 	source gazebo.sh
-	exec gazebo worlds/underwater.world
+	exec gzserver worlds/underwater.world
 } &
 sleep 5
 
@@ -21,7 +21,7 @@ sleep 5
 
 {
 	cd $dir/ardupilot/build/sitl/ArduSub
-	exec sim_vehicle.py -f gazebo-bluerov2 -L RATBeach --out=udp:0.0.0.0:14550 --console
+	exec sim_vehicle.py -f gazebo-bluerov2 -L RATBeach --out=udp:0.0.0.0:14550
 }
 
 wait
