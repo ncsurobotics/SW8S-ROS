@@ -5,8 +5,7 @@ trap 'kill 0; pkill gzserver; pkill gzclient' EXIT
 
 dir=${SW8_SOFTWARE_DIR-}
 
-source /root/.bashrc
-source $dir/Seawolf-8-Software/devel/setup.bash
+source $dir/Seawolf-8-Software/devel/setup.sh
 
 # Start all processes with & at the end
 {
@@ -22,7 +21,7 @@ sleep 5
 
 {
 	cd $dir/ardupilot/build/sitl/ArduSub
-	sim_vehicle.py -f gazebo-bluerov2 -L RATBeach --out=udp:0.0.0.0:14550
+	sim_vehicle.py -f gazebo-bluerov2 -L RATBeach --out=udp:0.0.0.0:14550 --console
 } &
 
 sleep 10m
