@@ -22,6 +22,6 @@ sleep 5
 {
 	cd $dir/ardupilot/build/sitl/ArduSub
 	sim_vehicle.py -f gazebo-bluerov2 -L RATBeach --out=udp:0.0.0.0:14550 --console
-} &
+}
 
-sleep 10m
+wait
