@@ -24,4 +24,4 @@ sleep 5
 	sim_vehicle.py -f gazebo-bluerov2 -L RATBeach --out=udp:0.0.0.0:14550
 } &
 
-sleep 1h
+sleep 10m
