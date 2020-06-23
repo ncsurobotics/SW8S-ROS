@@ -9,4 +9,5 @@
   <node name="drive_seconds_server" pkg="wolf_actions" type="drive_seconds_server.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
   <node name="submerge_seconds_server" pkg="wolf_actions" type="submerge_seconds_server.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
   <node name="fake_mission" pkg="wolf_actions" type="dummy_client.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+  <node name="meb" pkg="wolf_serial" type="meb.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/> 
 </launch>
