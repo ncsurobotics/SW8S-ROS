@@ -7,4 +7,4 @@ jobs:
     steps:
       - name: run the sim
         id: run
-        uses: Namr/underwater_gazebo_sim_action@v10
+        uses: Namr/underwater_gazebo_sim_action@v11
