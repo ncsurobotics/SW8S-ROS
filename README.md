@@ -4,15 +4,17 @@ This repository contains the ROS powered code that runs on Seawolf-8, an autonom
 ## Important ROS Topics
 The following is a list of major ROS topics in this project organized by the package they belong to
 ### wolf_serial
-* wolf_vertical
-    * contains Float64 messages that determine the downwards velocity of the sub, accepts parameters from -1 to 1, where 1 is the maximum upwards thrust and vice versa
-* wolf_lateral
-    * contains Float64 messages that determine the lateral velocity of the sub, accepts parameters from -1 to 1, where 1 is the maximum forwards thrust and vice versa
-* wolf_rotation
-    * contains Float64 messages that determine the yaw velocity of the sub, accepts parameters from -1 to 1, where 1 is the maximum clockwise thrust and vice versa
+* wolf_twist
+    * contains geometry_msgs/Twist messages that set the sub's linear (up, forward, left, etc.) and angular (pitch, roll, yaw) velocities
 * wolf_imu_euler
     * contains Vector3 messages that describe the subs orientation using euler angles
     
-    
-## Launching in simulation
-Please see the wiki for how to install proper simulation software, once it is installed set the system var SW8_SOFTWARE_DIR to point to where you installed all of your software. Now you can run the bash script "parallel_start.sh" to start the simulation, this will run the "seawolf8.launch" file by default
+
+## Running ROS Tests
+To run the tests, use this command
+
+`rostest PACKAGE TEST`
+
+most commonly tests will be "sanity check" tests which check the validity of topic IO of nodes within a package, these can run like this:
+
+`rostest wolf_serial sanity_checks.test`

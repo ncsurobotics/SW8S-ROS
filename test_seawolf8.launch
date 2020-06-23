@@ -1,0 +1,6 @@
+<launch>
+  <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" />
+  <!-- <node name="dummypub" pkg="wolf_control" type="dummypub.py" /> -->
+  <include file="$(find wolf_control)/launch/wolf_control.launch" />
+</launch>
+   
