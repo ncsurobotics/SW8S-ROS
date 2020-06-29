@@ -2,19 +2,23 @@
 
 import rospy
 import mavros
-from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Float64
 import unittest
 
 
 class PoseTest(unittest.TestCase):
     depth = 0.0
+    yaw = 0.0
     tolerance = 0.1  # what is the percentage of error that is allowable
     hold_time = 1  # how long (in seconds) should the error be held within tolerance
     rate = 20
 
     def pos_callback(self, data):
         self.depth = data.pose.pose.position.z
+
+    def yaw_callback(self, data):
+        self.yaw = data.data
 
     def test_depth(self):
         target_depth = -3
@@ -35,6 +39,30 @@ class PoseTest(unittest.TestCase):
                     rospy.logdebug("Took {} seconds to complete Depth Test, had {}% error"
                                    .format(rospy.get_time() - initial_time,
                                            (abs(self.depth - target_depth) / abs(target_depth)) * 100))
+                    success = True
+            else:
+                ticks = 0
+            rate.sleep()
+
+    def test_yaw(self):
+        target_yaw = 90
+        error_margin = target_yaw * self.tolerance
+        initial_time = rospy.get_time()
+
+        rate = rospy.Rate(self.rate)
+
+        rospy.Subscriber("wolf_yaw", Float64, self.yaw_callback)
+
+        success = False
+        ticks = 0  # counts the number of cycles that the tolerance has been met
+        target_ticks = self.rate * self.hold_time
+        while not success:
+            if target_yaw - abs(error_margin) < self.yaw < target_yaw + abs(error_margin):
+                ticks += 1
+                if ticks >= target_ticks:
+                    rospy.logdebug("Took {} seconds to complete Yaw Test, had {}% error"
+                                   .format(rospy.get_time() - initial_time,
+                                           (abs(self.yaw - target_yaw) / abs(target_yaw)) * 100))
                     success = True
             else:
                 ticks = 0

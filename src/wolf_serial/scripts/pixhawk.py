@@ -55,13 +55,7 @@ class Pixhawk:
         self.depth_pub.publish(data)
 
     def imu_callback(self, data):
-        orientation = data.orientation
-        euler = Vector3()
-        euler.x, euler.y, euler.z = quaternion_to_euler(orientation.x, orientation.y, orientation.z,
-                                                        orientation.w)
-        self.imu_pub.publish(euler)
-
-        self.yaw_pub.publish(euler.z)
+        self.yaw_pub.publish(data.data)
 
     def __init__(self):
         rospy.init_node('pixhawk', anonymous=False)
@@ -70,13 +64,13 @@ class Pixhawk:
 
         rc = OverrideRCIn()
         self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
-        self.imu_pub = rospy.Publisher("wolf_imu_euler", Vector3, queue_size=10)
+
         self.yaw_pub = rospy.Publisher("wolf_yaw", Float64,
                                        queue_size=10)  # Duplicating yaw publishers for now with IMU for PID node
         self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
         rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
-        rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
+        rospy.Subscriber("mavros/global_position/compass_hdg", Float64, self.imu_callback)
 
         while not rospy.is_shutdown():
             rc.channels[0] = self.pitch_rate
