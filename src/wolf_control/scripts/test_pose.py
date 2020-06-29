@@ -45,6 +45,7 @@ class PoseTest(unittest.TestCase):
                 ticks = 0
 
             if (rospy.get_time() - initial_time) > self.timeout:
+                rospy.logdebug("Failed Depth Test finished at {} depth, expected {}".format(self.depth, target_depth))
                 self.fail()
 
             rate.sleep()
@@ -73,6 +74,7 @@ class PoseTest(unittest.TestCase):
                 ticks = 0
 
             if (rospy.get_time() - initial_time) > self.timeout:
+                rospy.logdebug("Failed Yaw Test finished at {} yaw, expected {}".format(self.yaw, target_yaw))
                 self.fail()
 
             rate.sleep()
