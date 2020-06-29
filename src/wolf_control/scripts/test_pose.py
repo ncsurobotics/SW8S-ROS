@@ -13,6 +13,7 @@ class PoseTest(unittest.TestCase):
     tolerance = 0.1  # what is the percentage of error that is allowable
     hold_time = 1  # how long (in seconds) should the error be held within tolerance
     rate = 20
+    timeout = 30  # number of seconds a test will run before it times out and fails
 
     def pos_callback(self, data):
         self.depth = data.pose.pose.position.z
@@ -42,6 +43,10 @@ class PoseTest(unittest.TestCase):
                     success = True
             else:
                 ticks = 0
+
+            if (rospy.get_time() - initial_time) > self.timeout:
+                self.fail()
+
             rate.sleep()
 
     def test_yaw(self):
@@ -66,6 +71,10 @@ class PoseTest(unittest.TestCase):
                     success = True
             else:
                 ticks = 0
+
+            if (rospy.get_time() - initial_time) > self.timeout:
+                self.fail()
+
             rate.sleep()
 
 
