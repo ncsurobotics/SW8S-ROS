@@ -5,8 +5,11 @@ ENV PATH $PATH:/ardupilot/Tools/autotest
 ENV PATH /usr/lib/ccache:$PATH
 WORKDIR /
 
-RUN git clone https://github.com/ncsurobotics/Seawolf-8-Software.git
+RUN mkdir Seawolf-8-Software
+ADD . /Seawolf-8-Software
+
 WORKDIR /Seawolf-8-Software
-RUN git checkout oracle
 
 RUN source /opt/ros/melodic/setup.bash; catkin_make clean; rm -rf build; catkin_make
+
+ENTRYPOINT ["unbuffer", "/Seawolf-8-Software/test_start.sh"]
