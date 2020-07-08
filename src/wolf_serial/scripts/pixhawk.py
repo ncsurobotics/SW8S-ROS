@@ -8,7 +8,7 @@ from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Float64
 from mavros_msgs.msg import OverrideRCIn
 
-isShutdown = True
+
 
 def quaternion_to_euler(x, y, z, w):
     print("euler");
@@ -45,10 +45,11 @@ class Pixhawk:
     yaw_rate = 0.0
     forward_rate = 0.0
     strafe_rate = 0.0
+    isShutdown = True
     
     def twist_callback(self, data):
         print("twist_callback called")
-        if isShutdown == False:
+        if self.isShutdown == False:
           self.pitch_rate = value_map(data.angular.y, -1.0, 1.0, 1000, 2000) #how does value map work?
           self.roll_rate = value_map(data.angular.x, -1.0, 1.0, 1000, 2000)
           self.vertical_rate = value_map(data.linear.z, -1.0, 1.0, 1000, 2000)
@@ -58,39 +59,32 @@ class Pixhawk:
           print(self.pitch_rate)
           print(self.vertical_rate)
         else:
-          self.pitch_rate = value_map(0, 0, 0, 0, 0)
-          self.roll_rate = value_map(0, 0, 0, 0, 0)
-          self.vertical_rate = value_map(0, 0, 0, 0, 0)
-          self.yaw_rate = value_map(0, 0, 0, 0, 0)
-          self.forward_rate = value_map(0, 0, 0, 0, 0)
-          self.strafe_rate = value_map(0, 0, 0, 0, 0)
+          self.pitch_rate = 1500
+          self.roll_rate = 1500
+          self.vertical_rate = 1500
+          self.yaw_rate = 1500
+          self.forward_rate = 1500
+          self.strafe_rate = 1500
       
     def pose_callback(self, data):
         print("pose_callback called")
-        if isShutdown == False:
-          print(self) 
-          euler = Vector3()
-          orientation = data.pose.orientation
-          euler.x, euler.y, euler.z = quaternion_to_euler(orientation.x, orientation.y, orientation.z,
-                                                          orientation.w)
-          depth = data.pose.position.z
-          self.imu_pub.publish(euler)
-          self.depth_pub.publish(depth)
-          self.yaw_pub.publish(euler.z)
-        else:
-          self.pitch_rate = value_map(0, 0, 0, 0, 0)
-          self.roll_rate = value_map(0, 0, 0, 0, 0)
-          self.vertical_rate = value_map(0, 0, 0, 0, 0)
-          self.yaw_rate = value_map(0, 0, 0, 0, 0)
-          self.forward_rate = value_map(0, 0, 0, 0, 0)
-          self.strafe_rate = value_map(0, 0, 0, 0, 0)
+     
+        print(self) 
+        euler = Vector3()
+        orientation = data.pose.orientation
+        euler.x, euler.y, euler.z = quaternion_to_euler(orientation.x, orientation.y, orientation.z,
+                                                        orientation.w)
+        depth = data.pose.position.z
+        self.imu_pub.publish(euler)
+        self.depth_pub.publish(depth)
+        self.yaw_pub.publish(euler.z)
         
     def shutdown_callback(self, data):
         #shutdown code
         print("shutdown_callback called")
-        print(data)
+        print(data.data)
         if data == 1.0:
-          isShutdown = True
+          self.isShutdown = True
         
     def __init__(self):
         print("main start")
@@ -107,26 +101,18 @@ class Pixhawk:
         rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
         rospy.Subscriber("mavros/local_position/pose", PoseStamped, self.pose_callback)
         
-
+        
+        
+        
         while not rospy.is_shutdown():
-            if isShutdown == True:
-              self.pitch_rate = 0 
-              self.roll_rate = 0
-              self.vertical_rate = 0
-              self.yaw_rate = 0
-              self.forward_rate = 0
-              self.strafe_rate = 0
-              self.override_pub.publish(rc)
-              rate.sleep()
-            else: 
-              rc.channels[0] = self.pitch_rate
-              rc.channels[1] = self.roll_rate
-              rc.channels[2] = self.vertical_rate
-              rc.channels[3] = self.yaw_rate
-              rc.channels[0] = self.forward_rate
-              rc.channels[0] = self.strafe_rate
-              self.override_pub.publish(rc)
-              rate.sleep()
+          rc.channels[0] = 1500
+          rc.channels[1] = 1500
+          rc.channels[2] = 1500
+          rc.channels[3] = 1500
+          rc.channels[4] = 1500
+          rc.channels[5] = 1500
+          self.override_pub.publish(rc)
+          rate.sleep()
 
 
 if __name__ == '__main__':
