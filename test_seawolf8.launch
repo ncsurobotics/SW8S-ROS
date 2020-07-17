@@ -9,6 +9,15 @@
   <node name="set_mode" pkg="mavros" type="mavsys" args="mode -c ALT_HOLD" launch-prefix="bash -c 'sleep 11.0; $0 $@' "/>
   <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
   <node name="dummypub" pkg="wolf_control" type="dummypub.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+  
+  <node name="pixhawk_imu1_broadcaster" pkg="wolf_serial" type="pixhawk_orientation_broadcaster.py" respawn="false" output="screen" >
+    <param name="imu" type="string" value="mavros/local_position" />
+  </node>
+    
+  <node name="pixhawk_imu2_broadcaster" pkg="wolf_serial" type="pixhawk_orientation_broadcaster.py" respawn="false" output="screen" >
+    <param name="imu" type="string" value="mavros/local_position" /> 
+  </node>
+   
 </launch>
 
 
