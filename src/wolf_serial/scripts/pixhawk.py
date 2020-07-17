@@ -50,6 +50,8 @@ class Pixhawk:
         self.yaw_rate = value_map(data.angular.z, -1.0, 1.0, 1000, 2000)
         self.forward_rate = value_map(data.linear.x, -1.0, 1.0, 1000, 2000)
         self.strafe_rate = value_map(data.linear.y, -1.0, 1.0, 1000, 2000)
+        global time_duration 
+        time_duration = initial_time
 
     def depth_callback(self, data):
         self.depth_pub.publish(data)
@@ -58,6 +60,8 @@ class Pixhawk:
         self.yaw_pub.publish(data.data)
 
     def __init__(self):
+        global initial_time
+        initial_time = time.time()
         rospy.init_node('pixhawk', anonymous=False)
         rate = rospy.Rate(20)
         mavros.set_namespace()
@@ -69,9 +73,10 @@ class Pixhawk:
                                        queue_size=10)  # Duplicating yaw publishers for now with IMU for PID node
         self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
         rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
+        time_duration = time.time()
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
         rospy.Subscriber("mavros/global_position/compass_hdg", Float64, self.imu_callback)
-
+        
         while not rospy.is_shutdown():
             rc.channels[0] = self.pitch_rate
             rc.channels[1] = self.roll_rate
@@ -80,6 +85,18 @@ class Pixhawk:
             rc.channels[4] = self.forward_rate
             rc.channels[5] = self.strafe_rate
             self.override_pub.publish(rc)
+            
+            time_interval = time_duration - initial_time
+            if time_interval >= .5:
+                rc.channels[0] = 1500
+                rc.channels[1] = 1500
+                rc.channels[2] = 1500
+                rc.channels[3] = 1500
+                rc.channels[4] = 1500
+                rc.channels[5] = 1500
+                self.__init__
+            else:
+                self.__init__
             rate.sleep()
 
 
