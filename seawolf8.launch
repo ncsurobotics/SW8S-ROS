@@ -3,13 +3,4 @@
   <node name="drive_seconds_server" pkg="wolf_actions" type="drive_seconds_server.py" />
   <node name="submerge_seconds_server" pkg="wolf_actions" type="submerge_seconds_server.py" />
   <node name="fake_mission" pkg="wolf_actions" type="dummy_client.py" />
-  
-  <node name="pixhawk_orientation_broadcaster" pkg="wolf_serial" type="pixhawk_orientation_broadcaster.py" respawn="false" output="screen" >
-    <param name="imu" type="string" value="imu1" />
-  </node>
-    
-  <node name="pixhawk_orientation_broadcaster" pkg="wolf_serial" type="pixhawk_orientation_broadcaster.py" respawn="false" output="screen" >
-    <param name="imu" type="string" value="imu2" /> 
-  </node>
-
 </launch>
