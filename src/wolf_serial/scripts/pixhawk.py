@@ -8,23 +8,7 @@ from mavros_msgs.msg import OverrideRCIn
 from sensor_msgs.msg import Imu
 
 
-def quaternion_to_euler(x, y, z, w):
-    t0 = +2.0 * (w * x + y * z)
-    t1 = +1.0 - 2.0 * (x * x + y * y)
-    X = math.degrees(math.atan2(t0, t1))
-
-    t2 = +2.0 * (w * y - z * x)
-    t2 = +1.0 if t2 > +1.0 else t2
-    t2 = -1.0 if t2 < -1.0 else t2
-    Y = math.degrees(math.asin(t2))
-
-    t3 = +2.0 * (w * z + x * y)
-    t4 = +1.0 - 2.0 * (y * y + z * z)
-    Z = math.degrees(math.atan2(t3, t4))
-
-    return X, Y, Z
-
-
+# takes a value and remaps it from one range into another
 def value_map(value, istart, istop, ostart, ostop):
     val = ostart + (ostop - ostart) * ((value - istart) / (istop - istart))
     if val >= ostop:
@@ -43,6 +27,11 @@ class Pixhawk:
     forward_rate = 0.0
     strafe_rate = 0.0
 
+    # watchdog timer variables
+    # (checks to make sure data is flowing into the controller or kills thrusters
+    delta_time = 0.0
+    initial_time = 0.0
+
     def twist_callback(self, data):
         self.pitch_rate = value_map(data.angular.y, -1.0, 1.0, 1000, 2000)
         self.roll_rate = value_map(data.angular.x, -1.0, 1.0, 1000, 2000)
@@ -54,19 +43,29 @@ class Pixhawk:
     def depth_callback(self, data):
         self.depth_pub.publish(data)
 
+        # check how much time has passed since last update
+        self.delta_time = rospy.get_time() - self.initial_time
+        self.initial_time = rospy.get_time()
+
     def imu_callback(self, data):
         self.yaw_pub.publish(data.data)
+
+        # check how much time has passed since last update
+        self.delta_time = rospy.get_time() - self.initial_time
+        self.initial_time = rospy.get_time()
 
     def __init__(self):
         rospy.init_node('pixhawk', anonymous=False)
         rate = rospy.Rate(20)
         mavros.set_namespace()
 
+        # time setup
+        self.initial_time = rospy.get_time()
+
         rc = OverrideRCIn()
         self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
 
-        self.yaw_pub = rospy.Publisher("wolf_yaw", Float64,
-                                       queue_size=10)  # Duplicating yaw publishers for now with IMU for PID node
+        self.yaw_pub = rospy.Publisher("wolf_yaw", Float64, queue_size=10)
         self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
         rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
@@ -79,6 +78,17 @@ class Pixhawk:
             rc.channels[3] = self.yaw_rate
             rc.channels[4] = self.forward_rate
             rc.channels[5] = self.strafe_rate
+
+            # if no data is coming in, kill thrusters
+            if self.delta_time > 0.1:
+                rc.channels[0] = 1500
+                rc.channels[1] = 1500
+                rc.channels[2] = 1500
+                rc.channels[3] = 1500
+                rc.channels[4] = 1500
+                rc.channels[5] = 1500
+                rospy.logerr("WATCHDOG TIMER TRIGGERED: SENSOR DATA IS TOO SLOW")
+
             self.override_pub.publish(rc)
             rate.sleep()
 
