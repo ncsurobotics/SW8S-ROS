@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-
-    <node name="wolf_control" pkg="wolf_control" type="controller.py"/>
+    <node name="wolf_control" pkg="wolf_control" type="controller.py" />
 
     <node name="depth_pid" pkg="pid" type="controller" >
         <param name="Kp" value="0.3" />

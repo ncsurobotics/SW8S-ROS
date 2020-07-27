@@ -11,6 +11,10 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   rospy
   std_msgs
+  mavros
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions

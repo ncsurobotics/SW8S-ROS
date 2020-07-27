@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import rospy
-from geometry_msgs.msg import Vector3, Twist
+from geometry_msgs.msg import Twist
+from tf2_geometry_msgs import Vector3Stamped
 from std_msgs.msg import Float64
-import numpy as np
+import tf2_ros
+
 '''
 Lateral input: x and y in "absolute" (IMU) frame
 Rotational input: IMU frame degrees
@@ -33,18 +35,15 @@ class Controller:
 
     yaw = 0.0
     max_lateral_speed = 0.4
-    imu_x = 0.0
-    imu_y = 0.0
-    robot_x = 0.0
-    robot_y = 0.0
-    
+    world_goal = None
+
     def twist_callback(self, twist):
         self.depth_set_pub.publish(twist.linear.z)
         self.yaw_set_pub.publish(twist.angular.z)
-        self.imu_x = twist.linear.x
-        self.imu_y = twist.linear.y
-
-
+        self.world_goal = Vector3Stamped()
+        self.world_goal.vector.x = twist.linear.x
+        self.world_goal.vector.y = twist.linear.y
+        self.world_goal.header.frame_id = "world"
 
     def depth_control_callback(self, controller_output):
         self.depth_control_out = controller_output.data
@@ -64,29 +63,22 @@ class Controller:
         rospy.Subscriber("wolf_control/depth_output", Float64, self.depth_control_callback)
         self.twist_pub = rospy.Publisher("wolf_twist", Twist, queue_size=10)
 
-        while not rospy.is_shutdown():
-            
-            #Perform coordinate transform on absolute inputs
-            
-            theta = np.deg2rad(-self.yaw)
-            cos = np.cos(theta)
-            sin = np.sin(theta)
-            rotation = np.array([[cos, -sin], [sin, cos]])
-            imu_vec = np.array([self.imu_x, self.imu_y])
-            robot_vec = rotation.dot(imu_vec)
-            mag = np.linalg.norm(robot_vec)
-            if mag > 0.01:
-                robot_vec_capped = self.max_lateral_speed * robot_vec / np.linalg.norm(robot_vec)
-                self.robot_x, self.robot_y = robot_vec_capped
-            else:
-                self.robot_x = 0
-                self.robot_y = 0
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
 
+        while not rospy.is_shutdown():
             twist_out = Twist()
-            twist_out.linear.x = self.robot_x
-            twist_out.linear.y = self.robot_y
             twist_out.linear.z = self.depth_control_out
             twist_out.angular.z = self.yaw_control_out
+
+            if self.world_goal:
+                try:
+                    hull_goal = tf_buffer.transform(self.world_goal, 'wolf_hull')
+                    twist_out.linear.x = hull_goal.vector.x
+                    twist_out.linear.y = hull_goal.vector.y
+                except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                    pass
+
             self.twist_pub.publish(twist_out)
             rate.sleep()
 
