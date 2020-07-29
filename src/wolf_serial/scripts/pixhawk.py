@@ -45,7 +45,7 @@ class Pixhawk:
     yaw_rate = 0.0
     forward_rate = 0.0
     strafe_rate = 0.0
-    isShutdown = True
+    isShutdown = False;
     
     def twist_callback(self, data):
         print("twist_callback called")
@@ -82,9 +82,11 @@ class Pixhawk:
     def shutdown_callback(self, data):
         #shutdown code
         print("shutdown_callback called")
+        #print(str(isShutdown))
         print(data.data)
-        if data == 1.0:
+        if data.data == 0.0:
           self.isShutdown = True
+          print("shutdown")
         
     def __init__(self):
         print("main start")
