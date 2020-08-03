@@ -6,7 +6,4 @@
   <node name="arm_rover" pkg="mavros" type="mavsafety" args="arm" launch-prefix="bash -c 'sleep 10.5; $0 $@' "/>
   <node name="set_mode" pkg="mavros" type="mavsys" args="mode -c ALT_HOLD" launch-prefix="bash -c 'sleep 11.0; $0 $@' "/>
   <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
-  <node name="drive_seconds_server" pkg="wolf_actions" type="drive_seconds_server.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
-  <node name="submerge_seconds_server" pkg="wolf_actions" type="submerge_seconds_server.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
-  <node name="fake_mission" pkg="wolf_actions" type="dummy_client.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
 </launch>

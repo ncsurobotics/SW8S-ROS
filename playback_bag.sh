@@ -16,7 +16,12 @@ source $dir/Seawolf-8-Software/devel/setup.bash
 sleep 5
 
 {
-	exec roslaunch $dir/Seawolf-8-Software/test_seawolf8.launch
+  sleep 10
+  exec rosbag play $1
+}&
+
+{
+	exec roslaunch $dir/Seawolf-8-Software/mavros.launch
 } &
 
 {
@@ -25,4 +30,3 @@ sleep 5
 }
 
 wait
-
