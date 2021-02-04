@@ -1,0 +1,17 @@
+custom_dataset/8_8901.png
+custom_dataset/89_4875.png
+custom_dataset/31_5910.png
+custom_dataset/20_6317.png
+custom_dataset/2_7886.png
+custom_dataset/43_4121.png
+custom_dataset/93_4681.png
+custom_dataset/12_1841.png
+custom_dataset/10_2908.png
+custom_dataset/15_5315.png
+custom_dataset/41_9936.png
+custom_dataset/53_8986.png
+custom_dataset/13_9674.png
+custom_dataset/88_7385.png
+custom_dataset/15_3893.png
+custom_dataset/42_1631.png
+custom_dataset/87_7215.png
