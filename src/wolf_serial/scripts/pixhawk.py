@@ -119,6 +119,7 @@ class Pixhawk:
             rc.channels[4] = self.forward_rate
             rc.channels[5] = self.strafe_rate
 
+            '''
             # if no data is coming in, kill thrusters
             if self.delta_time > 0.1:
                 rc.channels[0] = 1500
@@ -128,7 +129,7 @@ class Pixhawk:
                 rc.channels[4] = 1500
                 rc.channels[5] = 1500
                 rospy.logerr("WATCHDOG TIMER TRIGGERED: SENSOR DATA IS TOO SLOW")
-
+'''
             self.override_pub.publish(rc)
             rate.sleep()
 
