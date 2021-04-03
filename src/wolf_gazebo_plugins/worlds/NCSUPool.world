@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<sdf version="1.4">
+  <world name="default">
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <model name="seawolf8">
+      <pose>0 0 3 0 0 0</pose>
+
+      <link name="base_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <plugin name="seawolf_model_control" filename="libseawolf_model_control.so"/>
+    </model>
+
+  </world>
+</sdf>
