@@ -72,7 +72,7 @@ namespace gazebo
 
 
             //we should move the model according to the RC rates
-            this->model->SetLinearVel(ignition::math::Vector3d(forwardRate, strafeRate, verticalRate));
+            this->model->SetLinearVel(pose.Rot().RotateVector(ignition::math::Vector3d(forwardRate, strafeRate, verticalRate)));
             this->model->SetAngularVel(ignition::math::Vector3d(pitchRate, rollRate, yawRate));
         }
 
