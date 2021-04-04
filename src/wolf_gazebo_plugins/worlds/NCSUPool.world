@@ -10,6 +10,7 @@
       <pose>0 0 3 0 0 0</pose>
 
       <link name="base_link">
+        <gravity>0</gravity>
         <collision name="collision">
           <geometry>
             <box>
