@@ -32,4 +32,6 @@ catkin_package(
 )
 
 add_library(seawolf_model_control src/seawolf_model_control.cpp)
+add_library(oracle src/oracle.cpp)
 target_link_libraries(seawolf_model_control ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
+target_link_libraries(oracle ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
