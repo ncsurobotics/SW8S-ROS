@@ -20,7 +20,8 @@ namespace gazebo
         physics::ModelPtr model;
         bool flag;
         int order;
-        int timer;
+        int requiredTime;
+        double currentTime;
     };
 
     class Oracle : public WorldPlugin
@@ -35,6 +36,7 @@ namespace gazebo
             this->robot = world->ModelByName("seawolf8");
 
             this->lastPositionGoalTriggered = 0;
+            lastTime = world->SimTime().Double();
 
             //extract position goals from a list of all models to split into a struct that is easier to work with
             std::regex rgx("^position_goal_(\\d+)_timer_(\\d+)$");
@@ -48,11 +50,12 @@ namespace gazebo
                     struct PositionGoal p;
                     p.model = m;
                     p.flag = false;
+                    p.currentTime = 0.0;
 
                     //extract the order and timer for each goal out of the name so the gates can be done in a particular order
                     // and so the robot must hold in that space for a set amount of time
                     p.order = std::stoi(match[1]);
-                    p.timer = std::stoi(match[2]);
+                    p.requiredTime = std::stoi(match[2]);
                     positionGoals.push_back(p);
                 }
             }
@@ -61,41 +64,51 @@ namespace gazebo
     public:
         void onUpdate()
         {
+            //calculate how much time has passed since last call to update
+            double deltaTime = world->SimTime().Double() - lastTime;
+            lastTime = world->SimTime().Double();
+
             if (!success)
             {
                 //are we done checking goals?
                 if (lastPositionGoalTriggered < positionGoals.size())
                 {
-                    struct PositionGoal currentPositionGoal = positionGoals[lastPositionGoalTriggered];
+                    struct PositionGoal *currentPositionGoal = &positionGoals.at(lastPositionGoalTriggered);
 
-                    if (currentPositionGoal.model->CollisionBoundingBox().Intersects(robot->CollisionBoundingBox()))
+                    if (currentPositionGoal->model->CollisionBoundingBox().Intersects(robot->CollisionBoundingBox()))
                     {
-                        currentPositionGoal.flag = true;
-                        lastPositionGoalTriggered++;
+                        if (currentPositionGoal->currentTime < static_cast<double>(currentPositionGoal->requiredTime))
+                        {
+                            //count up the timer by the time elpased since last update
+                            currentPositionGoal->currentTime += deltaTime;
+                        }
+                        else
+                        {
+                            currentPositionGoal->flag = true;
+                            lastPositionGoalTriggered++;
 
-                        //set color to green
-                        transport::NodePtr node;
-                        transport::PublisherPtr visPub;
-                        msgs::Visual visualMsg = currentPositionGoal.model->GetLink()->GetVisualMessage("visual");
-                        msgs::Color* green = new msgs::Color;
+                            //set color to green
+                            transport::NodePtr node;
+                            transport::PublisherPtr visPub;
+                            msgs::Visual visualMsg = currentPositionGoal->model->GetLink()->GetVisualMessage("visual");
+                            msgs::Color *green = new msgs::Color;
 
-                        node = transport::NodePtr(new transport::Node());
-                        node->Init(this->world->Name());
+                            node = transport::NodePtr(new transport::Node());
+                            node->Init(this->world->Name());
 
+                            visualMsg.set_name(currentPositionGoal->model->GetLink()->GetScopedName());
+                            visualMsg.set_parent_name(currentPositionGoal->model->GetScopedName());
+                            visPub = node->Advertise<msgs::Visual>("/gazebo/default/visual", 10);
 
-                        visualMsg.set_name(currentPositionGoal.model->GetLink()->GetScopedName());
-                        visualMsg.set_parent_name(currentPositionGoal.model->GetScopedName());
-                        visPub = node->Advertise<msgs::Visual>("/gazebo/default/visual", 10);
+                            green->set_r(0.0f);
+                            green->set_g(1.0f);
+                            green->set_b(0.0f);
+                            green->set_a(0.3f);
+                            visualMsg.mutable_material()->set_allocated_diffuse(green);
+                            visPub->Publish(visualMsg);
 
-
-                        green->set_r(0.0f);
-                        green->set_g(1.0f);
-                        green->set_b(0.0f);
-                        green->set_a(0.3f);
-                        visualMsg.mutable_material()->set_allocated_diffuse(green);
-                        visPub->Publish(visualMsg);
-
-                        std::cout << "Position Goal " << currentPositionGoal.order << " has been triggered" << std::endl;
+                            std::cout << "Position Goal " << currentPositionGoal->order << " has been triggered" << std::endl;
+                        }
                     }
                 }
                 else
@@ -116,6 +129,9 @@ namespace gazebo
 
         //have all targets been met?
         bool success;
+
+        //keep track of sim time so timers can work
+        double lastTime;
 
         // Pointer to the update event connection
         event::ConnectionPtr updateConnection;

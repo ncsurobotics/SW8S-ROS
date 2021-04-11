@@ -69,7 +69,7 @@
       </link>
     </model>
 
-    <model name="position_goal_2_timer_0">
+    <model name="position_goal_2_timer_3">
       <pose>0 -3 -1 0 0 0</pose>
       <static>true</static>
 
