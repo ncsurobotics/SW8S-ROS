@@ -37,7 +37,7 @@ class Rect:
         self.num = number if not number==None else random.randint(0,1000)
     def __str__(self):
         # return "x: %d, y: %d, w: %d, h: %d, area: %d, type: %s"%(self.getX(),self.getY(),self.getW(), self.getH(), self.getArea(),self.proposedObject)
-        return "type: %s, confidence: %2f"%(self.proposedObject,self.confidence)
+        return "type: %s, confidence: %2f, x,y: %d,%d"%(self.proposedObject,self.confidence,self.getX(),self.getY())
     # getters, basically useless
     def getX(self):
         return self.x

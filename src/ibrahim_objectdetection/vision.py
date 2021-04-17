@@ -1,10 +1,10 @@
 import cv2 as cv
 import imutils
-import ObjectDetection
+import lib.ObjectDetection
 import numpy as np
 import random
 import argparse
-import utils
+import lib.utils
 import time
 print("q: to quit\nt: to toggle automatically detecting when there is action(current state shown by color of border)\nd: to force a detection unconditionally")
 
@@ -47,8 +47,8 @@ def empty(a):
 
 cv.namedWindow("Final")
 
-cv.createTrackbar("Threshold1","Final",15,255,empty)#30
-cv.createTrackbar("Threshold2","Final",20,255,empty)#10
+cv.createTrackbar("Threshold1","Final",10,255,empty)#30
+cv.createTrackbar("Threshold2","Final",13,255,empty)#10
 # cv.createTrackbar("Sigma","Final",12,100,empty)#10
 
 
@@ -87,11 +87,11 @@ while(not (key & 0xFF == ord('q'))): # main loop
     ### processes image and get objects
     thresh1 = cv.getTrackbarPos("Threshold1", "Final")# if fps>20 else 255
     thresh2 = cv.getTrackbarPos("Threshold2", "Final")# if fps>20 else 255
-    processed = ObjectDetection.getProcessed(frame,threshold1=thresh1,threshold2=thresh2)
-    contours = ObjectDetection.getContours(processed)
-    targets = ObjectDetection.getTargets(contours)
-    boxes = ObjectDetection.getBoxes(targets)
-    objects = ObjectDetection.getObjectsFinal(frame, threshval1 = thresh1, threshval2 = thresh2)#ObjectDetection.getObjects(boxes)
+    processed = lib.ObjectDetection.getProcessed(frame,threshold1=thresh1,threshold2=thresh2)
+    contours = lib.ObjectDetection.getContours(processed)
+    targets = lib.ObjectDetection.getTargets(contours)
+    boxes = lib.ObjectDetection.getBoxes(targets)
+    objects = lib.ObjectDetection.getObjectsFinal(frame, threshval1 = thresh1, threshval2 = thresh2)#ObjectDetection.getObjects(boxes)
     gameObjects = classifier.getObjects(objects) # DNN detections
     ### image initialization for each frame
     detectingColor = (0,255,0) if isClassifying else (0,0,255)
@@ -144,7 +144,7 @@ while(not (key & 0xFF == ord('q'))): # main loop
         # cv.imwrite("result.jpg",detected)
     
     # stitching images and writing output
-    stacked = utils.stackImages(1,([blank,processed,targetFrame],[screen,frame,detected]))
+    stacked = lib.utils.stackImages(1,([blank,processed,targetFrame],[screen,frame,detected]))
     fps = cv.getTickFrequency() / (cv.getTickCount() - timer)
     cv.putText(stacked,file + " fps: "+str(int(fps)), (75, 40), cv.FONT_HERSHEY_SIMPLEX, 0.7, (20,230,20) if fps>60 else ((230,20,20) if fps>20 else (20,20,230)), 2)
     stacked = imutils.resize(stacked,height=800)#cv.resize(stacked,(1200,850))

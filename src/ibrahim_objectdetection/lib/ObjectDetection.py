@@ -17,7 +17,7 @@ defaultThresh=30
 # processes the image by converting to grayscale, dilating, and finding canny edges
 def getProcessed(image,threshold1=15,threshold2=20,sigma=12):
     image = imutils.resize(image.copy(),width=750)
-    # image = cv.GaussianBlur(imutils.resize(imutils.resize(imutils.resize(image.copy(),width=1000),width=100),width=750),(11,11),0)
+    image = cv.GaussianBlur(imutils.resize(imutils.resize(imutils.resize(image.copy(),width=1000),width=100),width=750),(11,11),0)
     img=image.copy()
     imgBlur = cv.GaussianBlur(img, (7, 7), 1)
     imgGray = cv.cvtColor(imgBlur, cv.COLOR_BGR2GRAY)
@@ -47,7 +47,7 @@ def getContours(processed,maxContours=None):
     temp  = cnt
     cnt=[]
     for c in temp:
-        if cv.contourArea(c)>250:
+        if cv.contourArea(c)>350: # filter out
             cnt.append(c)
     cnt.sort(key=lambda contour:cv.contourArea(contour))
     cnt.reverse()

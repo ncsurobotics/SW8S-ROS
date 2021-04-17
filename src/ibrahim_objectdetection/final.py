@@ -33,18 +33,21 @@ else:
 if(isVideo):
     webcam = cv.VideoCapture(video)
     webcam.read()
+windowName = "Reading "+file
 ###
 
 
 key=cv.waitKey(1)
-lastTime = int(time.time())
+def empty(a):
+    pass
 
 ###############
 #  CONSTANTS  #
 ###############
-AreaThresh = 50000
+AreaThresh = 30000
+thresh1 = 10
+thresh2 = 13
 isGUI = True;
-
 
 while(not (key & 0xFF == ord('q'))): # main loop
     timer = cv.getTickCount()
@@ -62,34 +65,27 @@ while(not (key & 0xFF == ord('q'))): # main loop
     frame = real#cv.GaussianBlur(imutils.resize(imutils.resize(imutils.resize(real,width=1000),width=100),width=750),(11,11),0)
 
     ### processes image and get objects
-    thresh1 = 15
-    thresh2 = 20
     gameObjects = classifier.getObjects(lib.ObjectDetection.getObjectsFinal(frame, threshval1 = thresh1, threshval2 = thresh2)) # Pre DNN detections
     dnnDetections = []
-    if(len(gameObjects)>1 and gameObjects[0].getArea()>AreaThresh) or (key & 0xFF == ord('d')): dnnDetections = classifier.getYoloObjects(frame) # DNN detections
+    useDnn = len(gameObjects)>0 and gameObjects[0].getArea()>AreaThresh
+    if(useDnn): dnnDetections = classifier.getYoloObjects(frame) # DNN detections
     preferredObjects = [] # the final object to be outputted
-
-    # for o in gameObjects:
-    #     print(o)
-    # if(len(dnnDetections)>0):
-    #     for o in dnnDetections:
-    #         print(o)
-
 
     if(len(dnnDetections)>0): 
         preferredObjects = dnnDetections
     elif(len(gameObjects)>0):
-        preferredObjects.append( gameObjects[0])
+        preferredObjects.append(gameObjects[0])
     if(not preferredObjects == []): 
         for o in preferredObjects:
             print(o)
+    else: print("Nothing detected")
     if(isGUI):
         processed = np.zeros((frame.shape[0], frame.shape[1], 3), np.uint8)
         if(not preferredObjects == []):
             for o in preferredObjects:
                 o.setRegion(frame,processed)
-                o.drawColor(processed,(0,255,0),thickness=3,drawDescriptions=True)
-        cv.imshow("Result",lib.utils.stackImages(1,([frame,processed])))
+                o.drawColor(processed,(0,255,0) if gameObjects[0].getArea()>AreaThresh else (0,0,255),thickness=3,drawDescriptions=True)
+        cv.imshow(windowName,lib.utils.stackImages(1,([frame,processed])))
     print()
 if(isVideo):
     webcam.release()
