@@ -6,9 +6,9 @@ import cv2 as cv
 import imutils
 import numpy as np
 
-sys.path.append("..")
-import rect
-from rect import Rect
+sys.path.append("../lib")
+import lib.rect
+from lib.rect import Rect
 
 class Classifier:
 
@@ -66,13 +66,13 @@ class Classifier:
                 #     label="dice"
                 # elif(label=="dice"):
                 #     label="gate"
-                confidence = str(round(confidences[i],2))
+                confidence = float(round(confidences[i],2))
                 result.append(Rect(x,y,w,h,proposedObject=label,confidence=confidence))
-            for r in result:
-                cv.rectangle(image, (x,y), (x+w, y+h), (random.randint(0,256),random.randint(0,256),random.randint(0,256)), 2)
-                cv.putText(image, label + " " + confidence, (x, y+20), cv.FONT_HERSHEY_PLAIN, 2, (255,255,255), 2)
-                r.drawColor(img,(random.randint(0,256),random.randint(0,256),random.randint(0,256)),thickness=3,drawDescriptions=True)
-            cv.imwrite("result.jpg",image)
+            # for r in result:
+            #     cv.rectangle(image, (x,y), (x+w, y+h), (random.randint(0,256),random.randint(0,256),random.randint(0,256)), 2)
+            #     cv.putText(image, label + " " + confidence, (x, y+20), cv.FONT_HERSHEY_PLAIN, 2, (255,255,255), 2)
+            #     r.drawColor(img,(random.randint(0,256),random.randint(0,256),random.randint(0,256)),thickness=3,drawDescriptions=True)
+            # cv.imwrite("result.jpg",image)
             result.sort(key = lambda obj:obj.confidence)
             result.reverse()
         return result
@@ -82,21 +82,31 @@ class Classifier:
         gatePosts=[]
         for o in objects:
             if(o.area>100 and o.proposedType=="taller"):#gatepost conditions
-                o.proposedObject = "gatePost"
+                o.proposedObject = "gatePost?"
+                o.confidence=-1
                 gatePosts.append(o)
             elif(o.area>15000 and o.proposedType=="wider"):#gate condition
-                o.proposedObject = "gate"
+                o.proposedObject = "gate?"
+                o.confidence=-1
                 finalObjects.append(o)
             elif((o.area>5000 and o.proposedType=="squarish")):#dice condition
-                o.proposedObject = "dice"
+                o.proposedObject = "dice?"
+                o.confidence=-1
                 finalObjects.append(o)
         gate = None
         if(len(gatePosts)>=2):#gatepost to gate conversion conditions
-            gate = rect.boudingBox(gatePosts)
-            gate.proposedObject = "gate"
+            gate = lib.rect.boudingBox(gatePosts)
+            gate.proposedObject = "gate?"
+            gate.confidence=-1
         if(not gate==None):
             if(not gate.w>gate.h):
                 gate=None
 
         finalObjects.append(gate)
+        for o in finalObjects:
+            if(type(o)==type(None)):
+                finalObjects.remove(o)
+
+        finalObjects.sort(key = lambda obj:obj.getArea())
+        finalObjects.reverse()
         return finalObjects
