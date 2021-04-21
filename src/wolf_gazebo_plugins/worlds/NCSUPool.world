@@ -70,7 +70,7 @@
       </link>
 
       <link name="top_pole">
-        <pose>0 1.5 3.5 0 0 0</pose>
+        <pose>0 1.5 3.4 0 0 0</pose>
         <gravity>0</gravity>
         <collision name="collision">
           <geometry>
@@ -87,9 +87,9 @@
 
         <visual name="visual">
           <material>
-            <diffuse>1 0 0 1</diffuse>
-            <ambient>1 0 0 1</ambient>
-            <specular>1 0 0 1</specular>
+            <diffuse>1 1 0 1</diffuse>
+            <ambient>1 1 0 1</ambient>
+            <specular>1 1 0 1</specular>
           </material>
           <geometry>
             <box>

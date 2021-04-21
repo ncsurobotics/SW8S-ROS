@@ -10,14 +10,12 @@ from std_msgs.msg import String, Float64
 class gate_detector:
     past_point = []
     focus_point = []
-    confidence_level = 100
-    secondary_confidence_level = 100
+    confidence_level = 0
+    secondary_confidence_level = 0
 
     def __init__(self):
         self.image_sub = rospy.Subscriber("iris/camera/image_raw", Image, self.frame_callback)
         self.center_pub = rospy.Publisher("gate_center", String, queue_size=10)
-        self.conf1_pub = rospy.Publisher("confidence1", Float64, queue_size=10)
-        self.conf2_pub = rospy.Publisher("confidence2", Float64, queue_size=10)
 
         self.bridge = CvBridge()
 
@@ -121,7 +119,7 @@ class gate_detector:
         x_conf = 0
         y_conf = 0
         
-        if len(points_of_interest)==2 and len(ppast_point)==2:
+        if len(ppast_point)==2:
             for curr_point in points_of_interest:
                 x_diff = ppast_point[0] - curr_point[0]
                 if (100 - abs(x_diff)) > x_conf:
@@ -152,8 +150,8 @@ class gate_detector:
             if gateLength != None:
                 gateLength = abs(gateLength)
         current_point = points      #rest are center points
-        current_confidence = self.confidence(current_point,self.past_point)
-        secondary_confidence = self.confidence(current_point,self.focus_point)
+        current_confidence = self.confidence(current_point, self.past_point)
+        secondary_confidence = self.confidence(current_point, self.focus_point)
 
         # Show Confidence Levels
         self.past_point = self.averageCenter(current_point)
@@ -169,9 +167,6 @@ class gate_detector:
             self.secondary_confidence_level = secondary_confidence
         else:
             self.secondary_confidence_level -= 1
-        
-        self.conf1_pub.publish(self.confidence_level)
-        self.conf2_pub.publish(self.secondary_confidence_level)
 
         final = frame.copy()
         if len(self.focus_point) == 2 and self.confidence_level > 20 or self.secondary_confidence_level > 20:
