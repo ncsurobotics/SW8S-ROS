@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+<sdf version="1.4">
+  <world name="default">
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <model name="seawolf8">
+      <pose>0 0 3 0 0 0</pose>
+
+      <link name="base_link">
+        <gravity>0</gravity>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <surface>
+            <contact>
+              <collide_bitmask>0x11</collide_bitmask>
+            </contact>
+          </surface>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <plugin name="seawolf_model_control" filename="libseawolf_model_control.so" />
+    </model>
+
+    <model name="position_goal_1_timer_0">
+      <pose>0 0 -0.5 0 0 0</pose>
+      <static>true</static>
+
+      <link name="base_link">
+
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <surface>
+            <contact>
+              <collide_bitmask>0x00</collide_bitmask>
+            </contact>
+          </surface>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+
+          <material>
+            <diffuse> 0 0 1 0.3</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="position_goal_2_timer_3">
+      <pose>0 -3 -1 0 0 0</pose>
+      <static>true</static>
+
+      <link name="base_link">
+
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <surface>
+            <contact>
+              <collide_bitmask>0x00</collide_bitmask>
+            </contact>
+          </surface>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+
+          <material>
+            <diffuse> 0 0 1 0.3</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <plugin name="oracle" filename="liboracle.so" />
+  </world>
+</sdf>

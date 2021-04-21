@@ -33,75 +33,54 @@
         </visual>
       </link>
 
+      <link name="camera_link">
+        <pose>0.0 0.5 0 0 0 1.5707</pose>
+        <sensor name='camera1' type='camera'>
+          <camera name="head">
+            <horizontal_fov>1.3962634</horizontal_fov>
+            <image>
+              <width>800</width>
+              <height>800</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.02</near>
+              <far>300</far>
+            </clip>
+          </camera>
+
+          <always_on>1</always_on>
+          <update_rate>30</update_rate>
+          <visualize>1</visualize>
+          <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+            <alwaysOn>true</alwaysOn>
+            <updateRate>0.0</updateRate>
+            <cameraName>iris/camera</cameraName>
+            <imageTopicName>image_raw</imageTopicName>
+            <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+            <frameName>camera_link</frameName>
+            <hackBaseline>0.07</hackBaseline>
+            <distortionK1>0.0</distortionK1>
+            <distortionK2>0.0</distortionK2>
+            <distortionK3>0.0</distortionK3>
+            <distortionT1>0.0</distortionT1>
+            <distortionT2>0.0</distortionT2>
+          </plugin>
+        </sensor>
+
+      </link>
+
+      <joint name="camera2frame" type="fixed">
+        <parent>base_link</parent>
+        <child>camera_link</child>
+        <pose>0 0.0 0 0 0 0</pose>
+        <axis>
+          <xyz>1 1 1</xyz>
+        </axis>
+      </joint>
+
       <plugin name="seawolf_model_control" filename="libseawolf_model_control.so" />
     </model>
-
-    <model name="position_goal_1_timer_0">
-      <pose>0 0 -0.5 0 0 0</pose>
-      <static>true</static>
-
-      <link name="base_link">
-
-        <collision name="collision">
-          <geometry>
-            <box>
-              <size>1 1 1</size>
-            </box>
-          </geometry>
-          <surface>
-            <contact>
-              <collide_bitmask>0x00</collide_bitmask>
-            </contact>
-          </surface>
-        </collision>
-
-        <visual name="visual">
-          <geometry>
-            <box>
-              <size>1 1 1</size>
-            </box>
-          </geometry>
-
-          <material>
-            <diffuse> 0 0 1 0.3</diffuse>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="position_goal_2_timer_3">
-      <pose>0 -3 -1 0 0 0</pose>
-      <static>true</static>
-
-      <link name="base_link">
-
-        <collision name="collision">
-          <geometry>
-            <box>
-              <size>1 1 1</size>
-            </box>
-          </geometry>
-          <surface>
-            <contact>
-              <collide_bitmask>0x00</collide_bitmask>
-            </contact>
-          </surface>
-        </collision>
-
-        <visual name="visual">
-          <geometry>
-            <box>
-              <size>1 1 1</size>
-            </box>
-          </geometry>
-
-          <material>
-            <diffuse> 0 0 1 0.3</diffuse>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <plugin name="oracle" filename="liboracle.so" />
+    
   </world>
 </sdf>
