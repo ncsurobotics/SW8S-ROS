@@ -140,7 +140,8 @@ class gate_detector:
         self.bridge = CvBridge()
         frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
         height, width, _ = frame.shape
-
+        gateLength = None
+        
         cv2.imshow('gate_original',frame)
         
         # start processing
