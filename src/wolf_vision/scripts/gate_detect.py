@@ -5,21 +5,25 @@ import timeit
 from matplotlib import pyplot as plt
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-from std_msgs.msg import String
+from std_msgs.msg import String, Float64
 
 class gate_detector:
     past_point = []
     focus_point = []
-    confidence_level = 0
-    secondary_confidence_level = 0
+    confidence_level = 100
+    secondary_confidence_level = 100
 
     def __init__(self):
         self.image_sub = rospy.Subscriber("iris/camera/image_raw", Image, self.frame_callback)
         self.center_pub = rospy.Publisher("gate_center", String, queue_size=10)
+        self.conf1_pub = rospy.Publisher("confidence1", Float64, queue_size=10)
+        self.conf2_pub = rospy.Publisher("confidence2", Float64, queue_size=10)
+
         self.bridge = CvBridge()
 
         cv2.namedWindow('gate_original')
         cv2.namedWindow('final')
+        cv2.namedWindow('output')
 
     def contourProcess(self, img):
         ### processing img to contours
@@ -113,16 +117,16 @@ class gate_detector:
     # calculate confidence by, x_conf/y_conf = 100 - difference between center_x and center_y, then average of the two confidence
     # input: current center points, past center point
     # output: confidence value below 100 (can go negative)
-    def confidence(self, points_of_interest, past_point):
+    def confidence(self, points_of_interest, ppast_point):
         x_conf = 0
         y_conf = 0
         
-        if len(points_of_interest)==2 and len(past_point)==2:
+        if len(points_of_interest)==2 and len(ppast_point)==2:
             for curr_point in points_of_interest:
-                x_diff = past_point[0] - curr_point[0]
+                x_diff = ppast_point[0] - curr_point[0]
                 if (100 - abs(x_diff)) > x_conf:
                     x_conf = 100-abs(x_diff)
-                y_diff = past_point[1] - curr_point[1]
+                y_diff = ppast_point[1] - curr_point[1]
                 if (100 - abs(y_diff)) > y_conf:
                     y_conf = 100-abs(x_diff)
                 return (x_conf+y_conf)/2
@@ -135,6 +139,7 @@ class gate_detector:
 
 
     def frame_callback(self,data):
+        self.bridge = CvBridge()
         frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
         height, width, _ = frame.shape
 
@@ -165,6 +170,9 @@ class gate_detector:
         else:
             self.secondary_confidence_level -= 1
         
+        self.conf1_pub.publish(self.confidence_level)
+        self.conf2_pub.publish(self.secondary_confidence_level)
+
         final = frame.copy()
         if len(self.focus_point) == 2 and self.confidence_level > 20 or self.secondary_confidence_level > 20:
             # Final center point here
@@ -173,14 +181,15 @@ class gate_detector:
             cv2.circle(final,(width/2,height/2),radius=5,color=(0,0,255),thickness=1)
             targetoffset = self.offset([width/2,height/2],self.focus_point)
             # output offset from frame center
-            self.center_pub.publish(targetoffset)
+            self.center_pub.publish(str(targetoffset))
             #draw edge points
             if gateLength != None:
                 cv2.circle(final,(self.focus_point[0]+gateLength/2,self.focus_point[1]),radius=5,color=(0,255,0),thickness=2)
 
 
         cv2.imshow("final",final)
-
+        cv2.waitKey(1)
+        
 if __name__ == '__main__':
     rospy.init_node('gate_detector', anonymous=True)
     detector = gate_detector()

@@ -6,6 +6,101 @@
       <uri>model://sun</uri>
     </include>
 
+    <model name="gate">
+      <pose>0 10 -3 0 0 1.5707</pose>
+
+      <link name="left_pole">
+        <pose>0 0 1.5 0 0 0</pose>
+        <gravity>0</gravity>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.5 0.5 3</size>
+            </box>
+          </geometry>
+          <surface>
+            <contact>
+              <collide_bitmask>0x11</collide_bitmask>
+            </contact>
+          </surface>
+        </collision>
+
+        <visual name="visual">
+          <material>
+            <diffuse>1 1 0 1</diffuse>
+            <ambient>1 1 0 1</ambient>
+            <specular>1 1 0 1</specular>
+          </material>
+          <geometry>
+            <box>
+              <size>0.5 0.5 3</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <link name="right_pole">
+        <pose>0 3 1.5 0 0 0</pose>
+        <gravity>0</gravity>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.5 0.5 3</size>
+            </box>
+          </geometry>
+          <surface>
+            <contact>
+              <collide_bitmask>0x11</collide_bitmask>
+            </contact>
+          </surface>
+        </collision>
+
+        <visual name="visual">
+          <material>
+            <diffuse>1 1 0 1</diffuse>
+            <ambient>1 1 0 1</ambient>
+            <specular>1 1 0 1</specular>
+          </material>
+          <geometry>
+            <box>
+              <size>0.5 0.5 3</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+
+      <link name="top_pole">
+        <pose>0 1.5 3.5 0 0 0</pose>
+        <gravity>0</gravity>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.5 4 0.5</size>
+            </box>
+          </geometry>
+          <surface>
+            <contact>
+              <collide_bitmask>0x11</collide_bitmask>
+            </contact>
+          </surface>
+        </collision>
+
+        <visual name="visual">
+          <material>
+            <diffuse>1 0 0 1</diffuse>
+            <ambient>1 0 0 1</ambient>
+            <specular>1 0 0 1</specular>
+          </material>
+          <geometry>
+            <box>
+              <size>0.5 4 0.5</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
+
     <model name="seawolf8">
       <pose>0 0 3 0 0 0</pose>
 
@@ -39,8 +134,8 @@
           <camera name="head">
             <horizontal_fov>1.3962634</horizontal_fov>
             <image>
-              <width>800</width>
-              <height>800</height>
+              <width>640</width>
+              <height>480</height>
               <format>R8G8B8</format>
             </image>
             <clip>
@@ -81,6 +176,6 @@
 
       <plugin name="seawolf_model_control" filename="libseawolf_model_control.so" />
     </model>
-    
+
   </world>
 </sdf>
