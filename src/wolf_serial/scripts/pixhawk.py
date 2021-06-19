@@ -7,6 +7,7 @@ import tf_conversions
 from geometry_msgs.msg import TransformStamped, Twist
 from std_msgs.msg import Float64
 from mavros_msgs.msg import OverrideRCIn
+from sensor_msgs.msg import Imu
 
 # takes a value and remaps it from one range into another
 def value_map(value, istart, istop, ostart, ostop):
@@ -60,8 +61,11 @@ class Pixhawk:
     # read the raw orientation sensor data and publish it to the rest of our nodes
     # (THIS NEEDS TO BE CHANGED, CURRENTLY USES MAGNETIC SENSOR AND NOT IMU BECAUSE OF BROKEN SIMULATOR)
     def imu_callback(self, data):
-        self.current_yaw = data.data
-        self.yaw_pub.publish(data.data)
+        quat = [data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w]
+
+        euler = tf_conversions.transformations.euler_from_quaternion(quat)
+        self.current_yaw = euler[2]
+        self.yaw_pub.publish(self.current_yaw)
 
         # check how much time has passed since last update
         self.delta_time = rospy.get_time() - self.initial_time
@@ -78,7 +82,7 @@ class Pixhawk:
         hull_transform.transform.translation.x = 0.0
         hull_transform.transform.translation.y = 0.0
         hull_transform.transform.translation.z = self.current_depth
-        q = tf_conversions.transformations.quaternion_from_euler(0, 0, math.radians(self.current_yaw))
+        q = tf_conversions.transformations.quaternion_from_euler(0, 0, self.current_yaw)
         hull_transform.transform.rotation.x = q[0]
         hull_transform.transform.rotation.y = q[1]
         hull_transform.transform.rotation.z = q[2]
@@ -104,7 +108,7 @@ class Pixhawk:
         # subscribe to our target movement values as well as our raw sensor data
         rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
-        rospy.Subscriber("mavros/global_position/compass_hdg", Float64, self.imu_callback)
+        rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
 
         # establish coordinate frame and its broadcaster
         self.coordinate_frame_broadcaster = tf2_ros.TransformBroadcaster()
@@ -112,12 +116,12 @@ class Pixhawk:
 
         while not rospy.is_shutdown():
             # tells the thrusters to move to target rates, this is where movement actually occurs
-            rc.channels[0] = self.pitch_rate
-            rc.channels[1] = self.roll_rate
-            rc.channels[2] = self.vertical_rate
-            rc.channels[3] = self.yaw_rate
-            rc.channels[4] = self.forward_rate
-            rc.channels[5] = self.strafe_rate
+            rc.channels[0] = int(self.pitch_rate)
+            rc.channels[1] = int(self.roll_rate)
+            rc.channels[2] = int(self.vertical_rate)
+            rc.channels[3] = int(self.yaw_rate)
+            rc.channels[4] = int(self.forward_rate)
+            rc.channels[5] = int(self.strafe_rate)
 
             '''
             # if no data is coming in, kill thrusters

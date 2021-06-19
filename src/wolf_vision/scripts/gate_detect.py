@@ -14,14 +14,16 @@ class gate_detector:
     secondary_confidence_level = 0
 
     def __init__(self):
-        self.image_sub = rospy.Subscriber("iris/camera/image_raw", Image, self.frame_callback)
+        self.image_sub = rospy.Subscriber("wolf_camera1/image_raw", Image, self.frame_callback)
         self.center_pub = rospy.Publisher("gate_center", String, queue_size=10)
+        self.final_pub = rospy.Publisher("wolf_camera1/image_final", Image, queue_size=10)
+        self.contour_pub = rospy.Publisher("wolf_camera1/image_contour", Image, queue_size=10)
 
         self.bridge = CvBridge()
 
-        cv2.namedWindow('gate_original')
-        cv2.namedWindow('final')
-        cv2.namedWindow('output')
+        #cv2.namedWindow('gate_original')
+        #cv2.namedWindow('final')
+        #cv2.namedWindow('output')
 
     def contourProcess(self, img):
         ### processing img to contours
@@ -30,10 +32,11 @@ class gate_detector:
         # Canny edge detection
         edge = cv2.Canny(blur,5,15,apertureSize=3,L2gradient=True)
         # produce the contours and place contour over original image
-        _, contours, _ = cv2.findContours(edge,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(edge,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
         out = cv2.drawContours(img.copy(),contours,-1,(255,0,0),2)
         # contour display
-        cv2.imshow('output',out)
+        self.contour_pub.publish(self.bridge.cv2_to_imgmsg(out, "bgr8"))
+        #cv2.imshow('output',out)
 
         ### filter contours
         location = []
@@ -142,7 +145,8 @@ class gate_detector:
         height, width, _ = frame.shape
         gateLength = None
         
-        cv2.imshow('gate_original',frame)
+        #cv2.imshow('gate_original',frame)
+        
         
         # start processing
         points = self.contourProcess(frame)
@@ -159,32 +163,37 @@ class gate_detector:
         if len(self.past_point) == 2:
             self.focus_point = self.past_point
 
-        if current_confidence > 70:
+        if current_confidence is not None and current_confidence > 70:
             self.confidence_level = current_confidence
         else:
             self.confidence_level -= 1
 
-        if secondary_confidence > 50:
+        if secondary_confidence is not None and secondary_confidence > 50:
             self.secondary_confidence_level = secondary_confidence
         else:
             self.secondary_confidence_level -= 1
 
         final = frame.copy()
         if len(self.focus_point) == 2 and self.confidence_level > 20 or self.secondary_confidence_level > 20:
+
+            self.focus_point[0] = int(self.focus_point[0])
+            self.focus_point[1] = int(self.focus_point[1])
+
             # Final center point here
             cv2.putText(final,"focus",(self.focus_point[0],self.focus_point[1]),cv2.FONT_HERSHEY_PLAIN,fontScale=1,color=(0,0,255))
             cv2.circle(final,(self.focus_point[0],self.focus_point[1]),radius=10,color=(0,0,255),thickness=1)
-            cv2.circle(final,(width/2,height/2),radius=5,color=(0,0,255),thickness=1)
-            targetoffset = self.offset([width/2,height/2],self.focus_point)
+            cv2.circle(final,(int(width/2),int(height/2)),radius=5,color=(0,0,255),thickness=1)
+            targetoffset = self.offset([int(width/2),int(height/2)],self.focus_point)
             # output offset from frame center
             self.center_pub.publish(str(targetoffset))
             #draw edge points
             if gateLength != None:
-                cv2.circle(final,(self.focus_point[0]+gateLength/2,self.focus_point[1]),radius=5,color=(0,255,0),thickness=2)
+                cv2.circle(final,(int(self.focus_point[0]+gateLength/2),int(self.focus_point[1])),radius=5,color=(0,255,0),thickness=2)
 
-
-        cv2.imshow("final",final)
-        cv2.waitKey(1)
+        
+        self.final_pub.publish(self.bridge.cv2_to_imgmsg(final, "bgr8"))
+        #cv2.imshow("final",final)
+        #cv2.waitKey(1)
         
 if __name__ == '__main__':
     rospy.init_node('gate_detector', anonymous=True)
