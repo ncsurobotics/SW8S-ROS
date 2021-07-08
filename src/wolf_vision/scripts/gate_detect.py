@@ -13,6 +13,10 @@ class gate_detector:
     confidence_level = 0
     secondary_confidence_level = 0
 
+    gate_length = 0
+    last_gate_length = 0
+    reset_focus = 0
+
     def __init__(self):
         self.image_sub = rospy.Subscriber("wolf_camera1/image_raw", Image, self.frame_callback)
         self.center_pub = rospy.Publisher("gate_center", String, queue_size=10)
@@ -28,9 +32,9 @@ class gate_detector:
     def contourProcess(self, img):
         ### processing img to contours
         # apply a blur to reduce # of contours
-        blur = cv2.bilateralFilter(img,5,100,100)
+        blur = cv2.bilateralFilter(img,11,100,100)
         # Canny edge detection
-        edge = cv2.Canny(blur,5,15,apertureSize=3,L2gradient=True)
+        edge = cv2.Canny(blur,5,21,apertureSize=3,L2gradient=True)
         # produce the contours and place contour over original image
         contours, _ = cv2.findContours(edge,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
         out = cv2.drawContours(img.copy(),contours,-1,(255,0,0),2)
@@ -61,6 +65,11 @@ class gate_detector:
             if radius > 20 and (angle > 155 or angle < 25) and aspect_ratio > 3:
                 # add the center of contours to location
                 location.append([int(x),int(y)])
+
+                # highlighting & circle filtered contours to different color
+                # out_filter = cv2.drawContours(out,contours,i,(0,0,255),2)
+                # out_circle = cv2.circle(out_filter,(int(x),int(y)),radius,(0,255,0),2)
+                # cv2.imshow('output_circle',out_circle)
 
         
         ### adding labels
@@ -143,6 +152,11 @@ class gate_detector:
         self.bridge = CvBridge()
         frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
         height, width, _ = frame.shape
+
+        # resize to 1/4 the size if the image is large
+        if (width < 200):
+            frame = cv2.resize(frame, (int(width/2),int(height/2)))
+
         gateLength = None
         
         #cv2.imshow('gate_original',frame)
@@ -154,12 +168,13 @@ class gate_detector:
             gateLength = points.pop(-1) #pop out the length of the gate
             if gateLength != None:
                 gateLength = abs(gateLength)
-        current_point = points      #rest are center points
-        current_confidence = self.confidence(current_point, self.past_point)
-        secondary_confidence = self.confidence(current_point, self.focus_point)
+
+        # confidence levels
+        current_confidence = self.confidence(points, self.past_point)
+        secondary_confidence = self.confidence(points, self.focus_point)
 
         # Show Confidence Levels
-        self.past_point = self.averageCenter(current_point)
+        self.past_point = self.averageCenter(points)
         if len(self.past_point) == 2:
             self.focus_point = self.past_point
 
@@ -172,6 +187,33 @@ class gate_detector:
             self.secondary_confidence_level = secondary_confidence
         else:
             self.secondary_confidence_level -= 1
+
+        # Discard results - if change in gate length exceeds x (5) pixels, stop updating focus point
+        # useful to prevent sudden unwanted edges
+        if (self.gate_length - self.last_gate_length) < 5: # only update focus point if the length of gate is consistent
+            discard_result = False
+            # discard if the focus point have not been detected for a while
+            if secondary_confidence is not None and secondary_confidence < 70 and secondary_confidence != 0: 
+                discard_result = True
+            # discard if the focus point will jump too much
+            if not discard_result and len(self.focus_point) and len(points) and abs(self.focus_point[0] - self.averageCenter(points)[0]) > 5:
+                discard_result = True
+        else: 
+            discard_result = True
+        
+        # update focus point
+        if not discard_result:
+            self.past_point = self.averageCenter(points)
+            if len(self.past_point) == 2:
+                self.focus_point = self.past_point
+                self.focus_point[0] = int(self.focus_point[0])
+                self.focus_point[1] = int(self.focus_point[1])
+        # if focus point has not been updated for too long (shaky camera)
+        elif self.reset_focus == 20:
+            self.reset_focus = 0
+            self.focus_point.clear()
+        else:
+            self.reset_focus += 1
 
         final = frame.copy()
         if len(self.focus_point) == 2 and self.confidence_level > 20 or self.secondary_confidence_level > 20:
@@ -189,7 +231,7 @@ class gate_detector:
             #draw edge points
             if gateLength != None:
                 cv2.circle(final,(int(self.focus_point[0]+gateLength/2),int(self.focus_point[1])),radius=5,color=(0,255,0),thickness=2)
-
+        self.last_gate_length = self.gate_length
         
         self.final_pub.publish(self.bridge.cv2_to_imgmsg(final, "bgr8"))
         #cv2.imshow("final",final)
