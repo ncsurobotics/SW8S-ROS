@@ -44,11 +44,11 @@ def talker():
     while not rospy.is_shutdown():
         dummy = Twist()
         dummy.linear.x = 0.0
-        dummy.linear.y = -0.25
+        dummy.linear.y = 0.0
         dummy.linear.z = -1.0
         dummy.angular.x = 0.0
         dummy.angular.y = 0.0
-        dummy.angular.z = 0.0
+        dummy.angular.z = -1.0
         rospy.loginfo(dummy)
         pub.publish(dummy)
         rate.sleep()

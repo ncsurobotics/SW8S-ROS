@@ -1,8 +1,15 @@
 # Seawolf-8-Software
 This repository contains the ROS powered code that runs on Seawolf-8, an autonomous submarine built by North Carolina State Universities underwater robotics club.
 
+## Dependencies
+The following packages are required and not included in the repository:
+* ros-noetic-mavros
+* ros-noetic-pid
+* OpenCV 4.2 (with python 3 bindings)
+
+
 ## Launching in simulation
-Please see the wiki for how to install proper simulation software, once it is installed set the system var SW8_SOFTWARE_DIR to point to where you installed all of your software. Now you can run the bash script "parallel_start.sh" to start the simulation, this will run the "seawolf8.launch" file by default
+After the project has been built, a simulated version of Seawolf-8 can be launched by running the simulate_seawolf8.launch file in roslaunch.
 
 ## Important ROS Topics
 The following is a list of major ROS topics in this project that a developer should be aware of

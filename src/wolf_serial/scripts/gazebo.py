@@ -5,9 +5,8 @@ import mavros
 import tf2_ros
 import tf_conversions
 from geometry_msgs.msg import TransformStamped, Twist
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Float32MultiArray
 from mavros_msgs.msg import OverrideRCIn
-from sensor_msgs.msg import Imu
 
 # takes a value and remaps it from one range into another
 def value_map(value, istart, istop, ostart, ostop):
@@ -20,7 +19,7 @@ def value_map(value, istart, istop, ostart, ostop):
     return val
 
 
-class Pixhawk:
+class Gazebo:
     pitch_rate = 0.0
     roll_rate = 0.0
     vertical_rate = 0.0
@@ -30,46 +29,31 @@ class Pixhawk:
 
     current_yaw = 0.0
     current_depth = 0.0
-    # watchdog timer variables
-    # (checks to make sure data is flowing into the controller or kills thrusters
-    delta_time = 0.0
-    initial_time = 0.0
 
     # transforms and their broadcasters
     coordinate_frame_broadcaster = None
 
-    # convert normalized target values into RC rates
+    # move into class vars
     def twist_callback(self, data):
-        self.pitch_rate = value_map(data.angular.y, -1.0, 1.0, 1000, 2000)
-        self.roll_rate = value_map(data.angular.x, -1.0, 1.0, 1000, 2000)
-        self.vertical_rate = value_map(data.linear.z, -1.0, 1.0, 1000, 2000)
-        self.yaw_rate = value_map(data.angular.z, -1.0, 1.0, 1000, 2000)
-        self.forward_rate = value_map(data.linear.x, -1.0, 1.0, 1000, 2000)
-        self.strafe_rate = value_map(data.linear.y, -1.0, 1.0, 1000, 2000)
+        self.pitch_rate = data.angular.y
+        self.roll_rate = data.angular.x
+        self.vertical_rate = data.linear.z
+        self.yaw_rate = data.angular.z
+        self.forward_rate = data.linear.x
+        self.strafe_rate = data.linear.y
 
     # read the raw depth sensor data and publish it to the rest of our nodes
     def depth_callback(self, data):
         self.current_depth = data.data
         self.depth_pub.publish(data.data)
 
-        # check how much time has passed since last update
-        self.delta_time = rospy.get_time() - self.initial_time
-        self.initial_time = rospy.get_time()
-
         self.update_transform()
 
     # read the raw orientation sensor data and publish it to the rest of our nodes
     # (THIS NEEDS TO BE CHANGED, CURRENTLY USES MAGNETIC SENSOR AND NOT IMU BECAUSE OF BROKEN SIMULATOR)
     def imu_callback(self, data):
-        quat = [data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w]
-
-        euler = tf_conversions.transformations.euler_from_quaternion(quat)
-        self.current_yaw = euler[2]
-        self.yaw_pub.publish(self.current_yaw)
-
-        # check how much time has passed since last update
-        self.delta_time = rospy.get_time() - self.initial_time
-        self.initial_time = rospy.get_time()
+        self.current_yaw = data.data
+        self.yaw_pub.publish(data.data)
 
         self.update_transform()
 
@@ -82,7 +66,7 @@ class Pixhawk:
         hull_transform.transform.translation.x = 0.0
         hull_transform.transform.translation.y = 0.0
         hull_transform.transform.translation.z = self.current_depth
-        q = tf_conversions.transformations.quaternion_from_euler(0, 0, self.current_yaw)
+        q = tf_conversions.transformations.quaternion_from_euler(0, 0, math.radians(self.current_yaw))
         hull_transform.transform.rotation.x = q[0]
         hull_transform.transform.rotation.y = q[1]
         hull_transform.transform.rotation.z = q[2]
@@ -92,23 +76,27 @@ class Pixhawk:
 
     def __init__(self):
         # init ROS
-        rospy.init_node('pixhawk', anonymous=False)
+        rospy.init_node('seawolf_gazebo_controller', anonymous=False)
         rate = rospy.Rate(20)
         mavros.set_namespace()
 
-        # time setup
-        self.initial_time = rospy.get_time()
-
         # establish publishers for sensor data, and thruster controls
-        rc = OverrideRCIn()
-        self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
+        rc = Float32MultiArray()
+        rc.data.append(0.0);
+        rc.data.append(0.0);
+        rc.data.append(0.0);
+        rc.data.append(0.0);
+        rc.data.append(0.0);
+        rc.data.append(0.0);
+
+        self.override_pub = rospy.Publisher("wolf_RC_output", Float32MultiArray, queue_size=10)
         self.yaw_pub = rospy.Publisher("wolf_yaw", Float64, queue_size=10)
         self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
 
         # subscribe to our target movement values as well as our raw sensor data
         rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
-        rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
-        rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
+        rospy.Subscriber("wolf_gazebo/global_alt", Float64, self.depth_callback)
+        rospy.Subscriber("wolf_gazebo/compass_hdg", Float64, self.imu_callback)
 
         # establish coordinate frame and its broadcaster
         self.coordinate_frame_broadcaster = tf2_ros.TransformBroadcaster()
@@ -116,27 +104,16 @@ class Pixhawk:
 
         while not rospy.is_shutdown():
             # tells the thrusters to move to target rates, this is where movement actually occurs
-            rc.channels[0] = int(self.pitch_rate)
-            rc.channels[1] = int(self.roll_rate)
-            rc.channels[2] = int(self.vertical_rate)
-            rc.channels[3] = int(self.yaw_rate)
-            rc.channels[4] = int(self.forward_rate)
-            rc.channels[5] = int(self.strafe_rate)
+            rc.data[0] = self.pitch_rate
+            rc.data[1] = self.roll_rate
+            rc.data[2] = self.vertical_rate
+            rc.data[3] = self.yaw_rate
+            rc.data[4] = self.forward_rate
+            rc.data[5] = self.strafe_rate
 
-            '''
-            # if no data is coming in, kill thrusters
-            if self.delta_time > 0.1:
-                rc.channels[0] = 1500
-                rc.channels[1] = 1500
-                rc.channels[2] = 1500
-                rc.channels[3] = 1500
-                rc.channels[4] = 1500
-                rc.channels[5] = 1500
-                rospy.logerr("WATCHDOG TIMER TRIGGERED: SENSOR DATA IS TOO SLOW")
-'''
             self.override_pub.publish(rc)
             rate.sleep()
 
 
 if __name__ == '__main__':
-    pixhawk = Pixhawk()
+    gazebo = Gazebo()

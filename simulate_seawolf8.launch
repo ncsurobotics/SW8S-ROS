@@ -1,0 +1,12 @@
+<launch>
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+      <arg name="world_name" value="$(find wolf_gazebo_plugins)/worlds/NCSUPool.world"/>
+    </include>
+
+    <include file="$(find wolf_control)/launch/wolf_control.launch" pass_all_args="true"/>
+    
+    <node name="seawolf_gazebo_controller" pkg="wolf_serial" type="gazebo.py" launch-prefix="bash -c 'sleep 5; $0 $@' "/>
+    <node name="dummypub" pkg="wolf_control" type="dummypub.py" launch-prefix="bash -c 'sleep 5; $0 $@' "/>
+    <node name="detector" pkg="wolf_vision" type="gate_detect.py" launch-prefix="bash -c 'sleep 5; $0 $@' "/>
+
+  </launch>
