@@ -28,7 +28,8 @@ def forwarder(file_name):
         if ret == False:
             break
         
-        final = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        final = frame
+        #final = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
         writer.write(final)
 
         image_pub.publish(bridge.cv2_to_imgmsg(final, "bgr8"))
