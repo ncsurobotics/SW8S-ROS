@@ -42,6 +42,7 @@ class Pixhawk:
     
     arm_service = None
     mode_serivce = None
+    armed = False
 
     # convert normalized target values into RC rates
     def vel_callback(self, data: Twist):
@@ -74,8 +75,12 @@ class Pixhawk:
         self.depth_pose_pub.publish(depth_pose)
     
     def killswitch_callback(self, data: Bool):
-        self.set_mode(0, 'ALT_HOLD')
-        self.arm(data.data)
+        if self.armed != data.data:
+            rospy.logerr(data.data)
+            self.armed = data.data
+            self.set_mode(0, 'ALT_HOLD')
+            self.arm(data.data)
+        
 
     def arm(self, should_arm: bool):
         if self.arm_service is not None: 
@@ -102,7 +107,7 @@ class Pixhawk:
         self.mode_service = rospy.ServiceProxy("mavros/set_mode", SetMode)
          
         self.set_mode(0, 'ALT_HOLD')
-        self.arm(True)
+        #self.arm(True)
         
         # time setup
         self.initial_time = rospy.get_time()
