@@ -5,7 +5,7 @@ import mavros
 import tf2_ros
 import tf_conversions
 from geometry_msgs.msg import TransformStamped, Twist, PoseWithCovarianceStamped
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Bool
 from mavros_msgs.msg import OverrideRCIn
 from mavros_msgs.srv import *
 from sensor_msgs.msg import Imu
@@ -73,6 +73,10 @@ class Pixhawk:
         depth_pose.pose.covariance = [i * 0.05 for i in identity]
         self.depth_pose_pub.publish(depth_pose)
     
+    def killswitch_callback(self, data: Bool):
+        self.set_mode(0, 'ALT_HOLD')
+        self.arm(data.data)
+
     def arm(self, should_arm: bool):
         if self.arm_service is not None: 
             result = self.arm_service(should_arm)
@@ -111,6 +115,7 @@ class Pixhawk:
         # subscribe to our target movement values as well as our raw sensor data
         rospy.Subscriber("cmd_vel", Twist, self.vel_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
+        rospy.Subscriber("hardware_killswitch", Bool, self.killswitch_callback)
 
         # establish coordinate frame and its broadcaster
         self.coordinate_frame_broadcaster = tf2_ros.TransformBroadcaster()
