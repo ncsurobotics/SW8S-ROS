@@ -17,8 +17,8 @@ class gate_detector:
     # configs
     width_filter = 20       # # of pixel width of one pole 
 
-    is_debug = True
-    show_window = True # display imshow() windows
+    is_debug = False
+    show_window = False # display imshow() windows
     #sim values and real values differ GREATLY
     focal_length = 381.36115
 

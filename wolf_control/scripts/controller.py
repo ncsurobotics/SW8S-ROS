@@ -102,8 +102,8 @@ class Controller:
         self.yawout_pub = rospy.Publisher("yaw_out", Float64, queue_size=10)
         self.yawin_pub = rospy.Publisher("yaw_state", Float64, queue_size=10)
 
-        depthPID = PIDController(0.5, 0.0, 0.0)
-        yawPID = PIDController(-0.3, 0.0, 0.0, True)
+        depthPID = PIDController(0.45, 0.0, 0.0)
+        yawPID = PIDController(-0.04, 0.0, 0.0, True)
 
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
