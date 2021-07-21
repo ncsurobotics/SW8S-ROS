@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 import rospy
 from geometry_msgs.msg import Twist, TransformStamped
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from enum import Enum
 import tf2_ros
 import math
 import numpy as np
 
+arm = True
+
 class mission_states(Enum):
+    WAIT_FOR_ARM = -2
     STOP = -1
     SUBMERGE = 0
     MOVE_TO_GATE = 1
@@ -17,12 +20,19 @@ def checkTolerance(current, wanted):
     tolerance = 0.3
     return (current < (wanted + tolerance)) and (current > (wanted - tolerance))
 
-        
+def setArm(data):
+    global arm
+    if arm != data.data:
+        arm = data.data
+
 def mission():
+    global arm
     rospy.init_node('mission_controller', anonymous=True)
-    state = mission_states.SUBMERGE
+    state = mission_states.WAIT_FOR_ARM
     goal_pub = rospy.Publisher('wolf_control/goal', Twist, queue_size=10)
     state_pub = rospy.Publisher('wolf_control/mission_state', String, queue_size=10)
+    rospy.Subscriber("hardware_killswitch", Bool, setArm)
+
     tf_buffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tf_buffer)
     rate = rospy.Rate(10) # 10hz
@@ -53,7 +63,15 @@ def mission():
                 goal = Twist()
                 goal.linear.z = submerge_depth
                 goal_pub.publish(goal)
-            if state == mission_states.SUBMERGE:
+            elif state == mission_states.WAIT_FOR_ARM:
+                if arm == False:
+                    timer = 0
+                else:
+                    rospy.logerr("counting")
+                if timer > 4:
+                    state = mission_states.SUBMERGE
+                    timer = 0
+            elif state == mission_states.SUBMERGE:
                 goal = Twist()
                 goal.linear.z = submerge_depth
                 goal.angular.z = 3.1415 + odom.transform.rotation.z
@@ -102,7 +120,7 @@ def mission():
                         right_stable = False
 
                 except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
-                    pass
+                    rospy.logerr("misson code: FUCK")
                 #left gate is too flakey, none of this is used right now
                 try:
                     world_left_gate = tf_buffer.lookup_transform("odom", "left_gate", rospy.Time(0))
@@ -123,7 +141,7 @@ def mission():
 
                     left_gate_queue.append(world_left_gate.transform.translation.x)
                 except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
-                    pass
+                    rospy.logerr("misson code: FUCK")
                 
                 # move towards the stable point
                 if right_stable:

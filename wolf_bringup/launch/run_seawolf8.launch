@@ -1,6 +1,6 @@
 <launch>
   <arg name="node_start_delay" default="3.0" />
-  <arg name="fcu_url" default="/dev/ttyACM2" />
+  <arg name="fcu_url" default="/dev/ttyACM0" />
   <include file="/opt/ros/noetic/share/mavros/launch/apm.launch" pass_all_args="true" />
   <include file="$(find wolf_control)/launch/wolf_control.launch" pass_all_args="true"/>
   <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>

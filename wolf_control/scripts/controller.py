@@ -4,9 +4,10 @@ import rospy
 from geometry_msgs.msg import Twist
 from tf2_geometry_msgs import Vector3Stamped
 from geometry_msgs.msg import TransformStamped
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Bool
 import tf2_ros
 import tf_conversions
+import time
 
 '''
 Lateral input: x and y in "absolute" (IMU) frame
@@ -79,12 +80,19 @@ class Controller:
     twist_state = Twist()
     max_lateral_speed = 0.4
     world_goal = None
+    armed = True
 
     delta_time = 0.0
     initial_time = 0.0
 
     yaw_setpoint = 0.0
     depth_setpoint = 0.0
+
+    def armed_callback(self, data: Bool):
+        if self.armed != data.data:
+            rospy.logerr(data.data)
+            self.armed = data.data
+        
     def goal_callback(self, twist: Twist):
         self.depth_setpoint = twist.linear.z
         self.yaw_setpoint = twist.angular.z
@@ -98,9 +106,11 @@ class Controller:
         rate = rospy.Rate(20)
 
         rospy.Subscriber("wolf_control/goal", Twist, self.goal_callback)
+        rospy.Subscriber("hardware_killswitch", Bool, self.armed_callback)
         self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
         self.yawout_pub = rospy.Publisher("yaw_out", Float64, queue_size=10)
         self.yawin_pub = rospy.Publisher("yaw_state", Float64, queue_size=10)
+
 
         depthPID = PIDController(0.45, 0.0, 0.0)
         yawPID = PIDController(-0.04, 0.0, 0.0, True)
@@ -113,43 +123,43 @@ class Controller:
             #calculate how much time is passing each loop
             self.delta_time = rospy.get_time() - self.initial_time
             self.initial_time = rospy.get_time()
-
-            #get the current robot position and give the appropriate pieces to the PID controllers
-            try:
-                #transform goal data into base_link space
-                odom = tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0))
-                rot = (odom.transform.rotation.x, odom.transform.rotation.y, odom.transform.rotation.z, odom.transform.rotation.w)
-
-                #give states to the PID controllers
-                yawPID.set_state(tf_conversions.transformations.euler_from_quaternion(rot)[2])
-                depthPID.set_state(odom.transform.translation.z)
-                self.yawin_pub.publish(tf_conversions.transformations.euler_from_quaternion(rot)[2])
-
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-                print("failed to get transform")
-                pass
-
-            yawPID.set_setpoint(self.yaw_setpoint)
-            depthPID.set_setpoint(self.depth_setpoint)
-            
-            yaw_control_out = yawPID.run_loop(self.delta_time)
-            depth_control_out = depthPID.run_loop(self.delta_time)
-            self.yawout_pub.publish(yaw_control_out)
-
-            #set thrusters to move according to movement controllers
-            cmd_vel = Twist()
-            cmd_vel.linear.z = depth_control_out
-            cmd_vel.angular.z = yaw_control_out
-            
-            if self.world_goal:
+            if self.armed:
+                #get the current robot position and give the appropriate pieces to the PID controllers
                 try:
-                    hull_goal = tf_buffer.transform(self.world_goal, 'base_link')
-                    cmd_vel.linear.x = hull_goal.vector.x
-                    cmd_vel.linear.y = hull_goal.vector.y
-                except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-                    rospy.logerr("world pose not found")
+                    #transform goal data into base_link space
+                    odom = tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0))
+                    rot = (odom.transform.rotation.x, odom.transform.rotation.y, odom.transform.rotation.z, odom.transform.rotation.w)
 
-            self.vel_pub.publish(cmd_vel)
+                    #give states to the PID controllers
+                    yawPID.set_state(tf_conversions.transformations.euler_from_quaternion(rot)[2])
+                    depthPID.set_state(odom.transform.translation.z)
+                    self.yawin_pub.publish(tf_conversions.transformations.euler_from_quaternion(rot)[2])
+
+                except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                    print("failed to get transform")
+                    pass
+
+                yawPID.set_setpoint(self.yaw_setpoint)
+                depthPID.set_setpoint(self.depth_setpoint)
+                
+                yaw_control_out = yawPID.run_loop(self.delta_time)
+                depth_control_out = depthPID.run_loop(self.delta_time)
+                self.yawout_pub.publish(yaw_control_out)
+
+                #set thrusters to move according to movement controllers
+                cmd_vel = Twist()
+                cmd_vel.linear.z = depth_control_out
+                cmd_vel.angular.z = yaw_control_out
+                
+                if self.world_goal:
+                    try:
+                        hull_goal = tf_buffer.transform(self.world_goal, 'base_link')
+                        cmd_vel.linear.x = hull_goal.vector.x
+                        cmd_vel.linear.y = hull_goal.vector.y
+                    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                        rospy.logerr("world pose not found")
+
+                self.vel_pub.publish(cmd_vel)
             rate.sleep()
 
 

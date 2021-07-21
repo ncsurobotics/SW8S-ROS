@@ -78,7 +78,7 @@ class Pixhawk:
         if self.armed != data.data:
             rospy.logerr(data.data)
             self.armed = data.data
-            self.set_mode(0, 'ALT_HOLD')
+            #self.set_mode(0, 'ALT_HOLD')
             self.arm(data.data)
         
 
@@ -107,7 +107,7 @@ class Pixhawk:
         self.mode_service = rospy.ServiceProxy("mavros/set_mode", SetMode)
          
         self.set_mode(0, 'ALT_HOLD')
-        #self.arm(True)
+        self.arm(True)
         
         # time setup
         self.initial_time = rospy.get_time()
@@ -127,26 +127,27 @@ class Pixhawk:
 #        self.update_transform()
 
         while not rospy.is_shutdown():
-            # tells the thrusters to move to target rates, this is where movement actually occurs
-            rc.channels[0] = int(self.pitch_rate)
-            rc.channels[1] = int(self.roll_rate)
-            rc.channels[2] = int(self.vertical_rate)
-            rc.channels[3] = int(self.yaw_rate)
-            rc.channels[4] = int(self.forward_rate)
-            rc.channels[5] = int(self.strafe_rate)
+            if self.armed:
+                # tells the thrusters to move to target rates, this is where movement actually occurs
+                rc.channels[0] = int(self.pitch_rate)
+                rc.channels[1] = int(self.roll_rate)
+                rc.channels[2] = int(self.vertical_rate)
+                rc.channels[3] = int(self.yaw_rate)
+                rc.channels[4] = int(self.forward_rate)
+                rc.channels[5] = int(self.strafe_rate)
 
-            '''
-            # if no data is coming in, kill thrusters
-            if self.delta_time > 0.1:
-                rc.channels[0] = 1500
-                rc.channels[1] = 1500
-                rc.channels[2] = 1500
-                rc.channels[3] = 1500
-                rc.channels[4] = 1500
-                rc.channels[5] = 1500
-                rospy.logerr("WATCHDOG TIMER TRIGGERED: SENSOR DATA IS TOO SLOW")
-'''
-            self.override_pub.publish(rc)
+                '''
+                # if no data is coming in, kill thrusters
+                if self.delta_time > 0.1:
+                    rc.channels[0] = 1500
+                    rc.channels[1] = 1500
+                    rc.channels[2] = 1500
+                    rc.channels[3] = 1500
+                    rc.channels[4] = 1500
+                    rc.channels[5] = 1500
+                    rospy.logerr("WATCHDOG TIMER TRIGGERED: SENSOR DATA IS TOO SLOW")
+    '''
+                self.override_pub.publish(rc)
 #            self.update_transform()
             rate.sleep()
 

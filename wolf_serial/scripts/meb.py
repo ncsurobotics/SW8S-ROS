@@ -4,7 +4,7 @@ from std_msgs.msg import Bool
 import serial
 import re
 
-serial_device = '/dev/ttyACM1'
+serial_device = '/dev/ttyACM2'
 serial_rate = 9600
 kill_regex = 'Armed: (\d+)'
 
