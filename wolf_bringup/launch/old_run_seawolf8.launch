@@ -1,8 +1,11 @@
 <launch>
-  <arg name="node_start_delay" default="3.0" />
+  <arg name="node_start_delay" default="12.0" />
   <arg name="fcu_url" default="/dev/ttyACM0" />
   <include file="/opt/ros/noetic/share/mavros/launch/apm.launch" pass_all_args="true" />
   <include file="$(find wolf_control)/launch/wolf_control.launch" pass_all_args="true"/>
+  <node name="allow_RC" pkg="mavros" type="mavparam" args="set SYSID_MYGCS 1" launch-prefix="bash -c 'sleep 8.5; $0 $@' "/>
+  <node name="set_mode" pkg="mavros" type="mavsys" args="mode -c ALT_HOLD" launch-prefix="bash -c 'sleep 9.0; $0 $@' "/>
+  <node name="arm_rover" pkg="mavros" type="mavsafety" args="arm" launch-prefix="bash -c 'sleep 10.5; $0 $@' "/>
   <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
   <node name="killswitch" pkg="wolf_serial" type="killswitch.py"/>
   <node name="camera_forwarder" pkg="wolf_vision" type="camera_forwarder.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>

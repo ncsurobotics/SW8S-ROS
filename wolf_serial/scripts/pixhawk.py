@@ -7,6 +7,7 @@ import tf_conversions
 from geometry_msgs.msg import TransformStamped, Twist, PoseWithCovarianceStamped
 from std_msgs.msg import Float64
 from mavros_msgs.msg import OverrideRCIn
+from mavros_msgs.srv import *
 from sensor_msgs.msg import Imu
 from nav_msgs.msg import Odometry
 
@@ -38,6 +39,9 @@ class Pixhawk:
 
     # transforms and their broadcasters
     coordinate_frame_broadcaster = None
+    
+    arm_service = None
+    mode_serivce = None
 
     # convert normalized target values into RC rates
     def vel_callback(self, data: Twist):
@@ -68,13 +72,34 @@ class Pixhawk:
                     0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
         depth_pose.pose.covariance = [i * 0.05 for i in identity]
         self.depth_pose_pub.publish(depth_pose)
+    
+    def arm(self, should_arm: bool):
+        if self.arm_service is not None: 
+            result = self.arm_service(should_arm)
+            if result.success == False:
+                self.arm(should_arm)
+    
+    def set_mode(self, base_mode: int, custom_mode: str):
+        if self.mode_service is not None:
+            result = self.mode_service(base_mode, custom_mode)
+            if result.mode_sent == False:
+                self.set_mode(base_mode, custom_mode)
 
     def __init__(self):
         # init ROS
         rospy.init_node('pixhawk', anonymous=False)
         rate = rospy.Rate(20)
         mavros.set_namespace()
-
+        
+        #Get Mavros Services
+        rospy.wait_for_service("mavros/cmd/arming")
+        rospy.wait_for_service("mavros/set_mode")
+        self.arm_service = rospy.ServiceProxy("mavros/cmd/arming", CommandBool)
+        self.mode_service = rospy.ServiceProxy("mavros/set_mode", SetMode)
+         
+        self.set_mode(0, 'ALT_HOLD')
+        self.arm(True)
+        
         # time setup
         self.initial_time = rospy.get_time()
 
