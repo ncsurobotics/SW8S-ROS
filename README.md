@@ -27,10 +27,10 @@ The following is a list of major ROS topics in this project that a developer sho
     * depth of the sub in meters
 
 ## Important TF2 Frames
-* world
+* map
     * just a constant reference frame set on startup
-* wolf_hull
-    * reference frame oriented with the general (center) hull of the sub. 
+* odom
+    * reference frame oriented with the hull of the sub. 
 
 ## Running ROS Tests
 To run the tests, use this command
