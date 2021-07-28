@@ -1,8 +1,0 @@
-# Define the goal
-float32 seconds_goal # number of seconds to submerge
----
-# Define the result
-float32 seconds_complete
----
-# Define a feedback message
-float32 percent_complete
