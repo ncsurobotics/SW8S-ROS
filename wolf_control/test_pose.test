@@ -1,0 +1,16 @@
+<launch>
+  <arg name="fcu_url" default="udp://0.0.0.0:14550@" />
+  <arg name="log_output" default="log" />
+  <include file="/opt/ros/melodic/share/mavros/launch/apm.launch" pass_all_args="true" />
+  <include file="$(find wolf_control)/launch/wolf_control.launch" />
+  <arg name="node_start_delay" default="12.0" />
+  <node name="disable_checks" pkg="mavros" type="mavparam" args="set ARMING_CHECK 0" launch-prefix="bash -c 'sleep 7.5; $0 $@' "/>
+  <node name="arm_rover" pkg="mavros" type="mavsafety" args="arm" launch-prefix="bash -c 'sleep 10.5; $0 $@' "/>
+  <node name="set_mode" pkg="mavros" type="mavsys" args="mode -c ALT_HOLD" launch-prefix="bash -c 'sleep 11.0; $0 $@' "/>
+  <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+  <node name="dummypub" pkg="wolf_control" type="dummypub.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+  <test test-name="test_pose" pkg="wolf_control" type="test_pose.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+</launch>
+
+
+
