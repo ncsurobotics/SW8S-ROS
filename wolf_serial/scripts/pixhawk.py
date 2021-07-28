@@ -106,7 +106,7 @@ class Pixhawk:
         self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
 
         # subscribe to our target movement values as well as our raw sensor data
-        rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
+        rospy.Subscriber("cmd_vel", Twist, self.twist_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
         rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
 

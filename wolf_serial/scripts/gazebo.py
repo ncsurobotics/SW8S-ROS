@@ -34,7 +34,7 @@ class Gazebo:
     coordinate_frame_broadcaster = None
 
     # move into class vars
-    def twist_callback(self, data):
+    def vel_callback(self, data):
         self.pitch_rate = data.angular.y
         self.roll_rate = data.angular.x
         self.vertical_rate = data.linear.z
@@ -94,7 +94,7 @@ class Gazebo:
         self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
 
         # subscribe to our target movement values as well as our raw sensor data
-        rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
+        rospy.Subscriber("cmd_vel", Twist, self.vel_callback)
         rospy.Subscriber("wolf_gazebo/global_alt", Float64, self.depth_callback)
         rospy.Subscriber("wolf_gazebo/compass_hdg", Float64, self.imu_callback)
 

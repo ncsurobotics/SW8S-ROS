@@ -10,7 +10,7 @@ import unittest
 class PixhawkTest(unittest.TestCase):
 
     def test_vertical_rate(self):
-        pub = rospy.Publisher("wolf_twist", Twist, queue_size=0)
+        pub = rospy.Publisher("cmd_vel", Twist, queue_size=0)
 
         vertical_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
         vertical_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
@@ -41,7 +41,7 @@ class PixhawkTest(unittest.TestCase):
         self.assertEqual(vertical_rate, 1000.0, "PIXHAWK NODE: inputting rate < 1.0 results in bad RC rate")
 
     def test_lateral_rate(self):
-        pub = rospy.Publisher("wolf_twist", Twist, queue_size=0)
+        pub = rospy.Publisher("cmd_vel", Twist, queue_size=0)
 
         lateral_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
         lateral_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
@@ -72,7 +72,7 @@ class PixhawkTest(unittest.TestCase):
         self.assertEqual(lateral_rate, 1000.0, "PIXHAWK NODE: inputting rate < 1.0 results in bad RC rate")
 
     def test_yaw_rate(self):
-        pub = rospy.Publisher("wolf_twist", Twist, queue_size=0)
+        pub = rospy.Publisher("cmd_vel", Twist, queue_size=0)
 
         yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
         yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
@@ -101,7 +101,7 @@ class PixhawkTest(unittest.TestCase):
         self.assertEqual(yaw_rate, 1000.0, "PIXHAWK NODE: inputting rate < 1.0 results in bad RC rate")
 
     def test_mixed_rates(self):
-        pub = rospy.Publisher("wolf_twist", Twist, queue_size=0)
+        pub = rospy.Publisher("cmd_vel", Twist, queue_size=0)
 
         yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
         yaw_rate = rospy.wait_for_message(mavros.get_topic("rc", "override"), OverrideRCIn)
