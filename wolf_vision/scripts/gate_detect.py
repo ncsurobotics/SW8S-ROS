@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 import rospy
 import cv2
-import timeit
+import math
 from matplotlib import pyplot as plt
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import String, Float64
+from geometry_msgs.msg import TransformStamped, Quaternion
+import tf2_ros
 
 class gate_detector:
     past_point = []
@@ -17,11 +19,19 @@ class gate_detector:
     last_gate_length = 0
     reset_focus = 0
 
+    is_debug = False
+
+    #sim values and real values differ GREATLY
+    focal_length = 381.36115
+
     def __init__(self):
+
+        if self.is_debug:
+            self.center_pub = rospy.Publisher("wolf_vision/gate_center", String, queue_size=10)
+            self.final_pub = rospy.Publisher("wolf_camera1/image_final", Image, queue_size=10)
+            self.contour_pub = rospy.Publisher("wolf_camera1/image_contour", Image, queue_size=10)
+
         self.image_sub = rospy.Subscriber("wolf_camera1/image_raw", Image, self.frame_callback)
-        self.center_pub = rospy.Publisher("wolf_vision/gate_center", String, queue_size=10)
-        self.final_pub = rospy.Publisher("wolf_camera1/image_final", Image, queue_size=10)
-        self.contour_pub = rospy.Publisher("wolf_camera1/image_contour", Image, queue_size=10)
 
         self.bridge = CvBridge()
 
@@ -39,7 +49,8 @@ class gate_detector:
         contours, _ = cv2.findContours(edge,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
         out = cv2.drawContours(img.copy(),contours,-1,(255,0,0),2)
         # contour display
-        self.contour_pub.publish(self.bridge.cv2_to_imgmsg(out, "bgr8"))
+        if self.is_debug:
+            self.contour_pub.publish(self.bridge.cv2_to_imgmsg(out, "bgr8"))
         #cv2.imshow('output',out)
 
         ### filter contours
@@ -226,16 +237,34 @@ class gate_detector:
             cv2.circle(final,(self.focus_point[0],self.focus_point[1]),radius=10,color=(0,0,255),thickness=1)
             cv2.circle(final,(int(width/2),int(height/2)),radius=5,color=(0,0,255),thickness=1)
             targetoffset = self.offset([int(width/2),int(height/2)],self.focus_point)
-            # output offset from frame center
-            self.center_pub.publish(str(targetoffset))
+
             #draw edge points
             if gateLength != None:
                 cv2.circle(final,(int(self.focus_point[0]+gateLength/2),int(self.focus_point[1])),radius=5,color=(0,255,0),thickness=2)
+
+            #convert offset into angles to target
+            angle_to_gate = [math.atan(targetoffset[0] / self.focal_length), math.atan(targetoffset[1] / self.focal_length)]
+            if self.is_debug:
+                self.center_pub.publish(str(targetoffset) + str(angle_to_gate))
+
+            #make a TF2 frame for the gate
+            gate_transform = TransformStamped()
+            gate_transform.header.stamp = rospy.Time.now()
+            gate_transform.header.frame_id = "odom"
+            gate_transform.child_frame_id = "gate"
+            gate_transform.transform.translation.x = math.cos(angle_to_gate[0])
+            gate_transform.transform.translation.y = math.sin(angle_to_gate[0])
+            gate_transform.transform.translation.z = 0.0
+            gate_transform.transform.rotation.x = 0
+            gate_transform.transform.rotation.y = 0
+            gate_transform.transform.rotation.z = 0
+            gate_transform.transform.rotation.w = 1
+            tf2_ros.TransformBroadcaster().sendTransform(gate_transform)
+
         self.last_gate_length = self.gate_length
         
-        self.final_pub.publish(self.bridge.cv2_to_imgmsg(final, "bgr8"))
-        #cv2.imshow("final",final)
-        #cv2.waitKey(1)
+        if self.is_debug:
+            self.final_pub.publish(self.bridge.cv2_to_imgmsg(final, "bgr8"))
         
 if __name__ == '__main__':
     rospy.init_node('gate_detector', anonymous=True)
