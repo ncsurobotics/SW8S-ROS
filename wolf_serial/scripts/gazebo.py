@@ -39,8 +39,8 @@ class Gazebo:
         self.roll_rate = data.angular.x
         self.vertical_rate = data.linear.z
         self.yaw_rate = data.angular.z
-        self.forward_rate = data.linear.x
-        self.strafe_rate = data.linear.y
+        self.forward_rate = data.linear.y
+        self.strafe_rate = data.linear.x
 
     # read the raw depth sensor data and publish it to the rest of our nodes
     def depth_callback(self, data: Float64):

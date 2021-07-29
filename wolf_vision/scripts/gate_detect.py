@@ -227,7 +227,7 @@ class gate_detector:
             self.reset_focus += 1
 
         final = frame.copy()
-        if len(self.focus_point) == 2 and self.confidence_level > 20 or self.secondary_confidence_level > 20:
+        if len(self.focus_point) == 2 and (self.confidence_level > 20 or self.secondary_confidence_level > 20):
 
             self.focus_point[0] = int(self.focus_point[0])
             self.focus_point[1] = int(self.focus_point[1])
