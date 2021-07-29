@@ -19,7 +19,7 @@ class gate_detector:
 
     def __init__(self):
         self.image_sub = rospy.Subscriber("wolf_camera1/image_raw", Image, self.frame_callback)
-        self.center_pub = rospy.Publisher("gate_center", String, queue_size=10)
+        self.center_pub = rospy.Publisher("wolf_vision/gate_center", String, queue_size=10)
         self.final_pub = rospy.Publisher("wolf_camera1/image_final", Image, queue_size=10)
         self.contour_pub = rospy.Publisher("wolf_camera1/image_contour", Image, queue_size=10)
 

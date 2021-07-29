@@ -21,10 +21,6 @@ The following is a list of major ROS topics in this project that a developer sho
 * cmd_vel
     * contains geometry_msgs/Twist messages that set the sub's linear (up, forward, left, etc.) and angular (pitch, roll, yaw) velocities directly
     * should not be set outside of pose controllers
-* wolf_yaw
-    * current yaw of the sub in degrees (uses magnetic compass but can be changed)
-* wolf_depth
-    * depth of the sub in meters
 
 ## Important TF2 Frames
 * map
