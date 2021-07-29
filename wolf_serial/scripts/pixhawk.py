@@ -39,7 +39,7 @@ class Pixhawk:
     coordinate_frame_broadcaster = None
 
     # convert normalized target values into RC rates
-    def twist_callback(self, data):
+    def vel_callback(self, data: Twist):
         self.pitch_rate = value_map(data.angular.y, -1.0, 1.0, 1000, 2000)
         self.roll_rate = value_map(data.angular.x, -1.0, 1.0, 1000, 2000)
         self.vertical_rate = value_map(data.linear.z, -1.0, 1.0, 1000, 2000)
@@ -48,7 +48,7 @@ class Pixhawk:
         self.strafe_rate = value_map(data.linear.y, -1.0, 1.0, 1000, 2000)
 
     # read the raw depth sensor data and publish it to the rest of our nodes
-    def depth_callback(self, data):
+    def depth_callback(self, data: Float64):
         self.current_depth = data.data
 
         # check how much time has passed since last update
@@ -57,7 +57,7 @@ class Pixhawk:
 
     # read the raw orientation sensor data and publish it to the rest of our nodes
     # (THIS NEEDS TO BE CHANGED, CURRENTLY USES MAGNETIC SENSOR AND NOT IMU BECAUSE OF BROKEN SIMULATOR)
-    def imu_callback(self, data):
+    def imu_callback(self, data: Imu):
         quat = [data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w]
 
         euler = tf_conversions.transformations.euler_from_quaternion(quat)
@@ -98,7 +98,7 @@ class Pixhawk:
         self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
 
         # subscribe to our target movement values as well as our raw sensor data
-        rospy.Subscriber("cmd_vel", Twist, self.twist_callback)
+        rospy.Subscriber("cmd_vel", Twist, self.vel_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
         rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
 

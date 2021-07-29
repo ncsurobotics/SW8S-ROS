@@ -34,7 +34,7 @@ class Gazebo:
     coordinate_frame_broadcaster = None
 
     # move into class vars
-    def vel_callback(self, data):
+    def vel_callback(self, data: Twist):
         self.pitch_rate = data.angular.y
         self.roll_rate = data.angular.x
         self.vertical_rate = data.linear.z
@@ -43,12 +43,12 @@ class Gazebo:
         self.strafe_rate = data.linear.y
 
     # read the raw depth sensor data and publish it to the rest of our nodes
-    def depth_callback(self, data):
+    def depth_callback(self, data: Float64):
         self.current_depth = data.data
 
     # read the raw orientation sensor data and publish it to the rest of our nodes
     # (THIS NEEDS TO BE CHANGED, CURRENTLY USES MAGNETIC SENSOR AND NOT IMU BECAUSE OF BROKEN SIMULATOR)
-    def imu_callback(self, data):
+    def imu_callback(self, data: Float64):
         self.current_yaw = data.data
 
     # updates the hulls position in TF2

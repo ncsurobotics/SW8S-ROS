@@ -148,7 +148,7 @@ class gate_detector:
         return [x,y]
 
 
-    def frame_callback(self,data):
+    def frame_callback(self,data: Image):
         self.bridge = CvBridge()
         frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
         height, width, _ = frame.shape
