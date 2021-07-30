@@ -39,7 +39,7 @@ class Pixhawk:
     coordinate_frame_broadcaster = None
 
     # convert normalized target values into RC rates
-    def twist_callback(self, data):
+    def vel_callback(self, data: Twist):
         self.pitch_rate = value_map(data.angular.y, -1.0, 1.0, 1000, 2000)
         self.roll_rate = value_map(data.angular.x, -1.0, 1.0, 1000, 2000)
         self.vertical_rate = value_map(data.linear.z, -1.0, 1.0, 1000, 2000)
@@ -48,37 +48,31 @@ class Pixhawk:
         self.strafe_rate = value_map(data.linear.y, -1.0, 1.0, 1000, 2000)
 
     # read the raw depth sensor data and publish it to the rest of our nodes
-    def depth_callback(self, data):
+    def depth_callback(self, data: Float64):
         self.current_depth = data.data
-        self.depth_pub.publish(data.data)
 
         # check how much time has passed since last update
         self.delta_time = rospy.get_time() - self.initial_time
         self.initial_time = rospy.get_time()
 
-        self.update_transform()
-
     # read the raw orientation sensor data and publish it to the rest of our nodes
     # (THIS NEEDS TO BE CHANGED, CURRENTLY USES MAGNETIC SENSOR AND NOT IMU BECAUSE OF BROKEN SIMULATOR)
-    def imu_callback(self, data):
+    def imu_callback(self, data: Imu):
         quat = [data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w]
 
         euler = tf_conversions.transformations.euler_from_quaternion(quat)
         self.current_yaw = euler[2]
-        self.yaw_pub.publish(self.current_yaw)
 
         # check how much time has passed since last update
         self.delta_time = rospy.get_time() - self.initial_time
         self.initial_time = rospy.get_time()
-
-        self.update_transform()
 
     # updates the hulls position in TF2
     def update_transform(self):
         hull_transform = TransformStamped()
         hull_transform.header.stamp = rospy.Time.now()
-        hull_transform.header.frame_id = "world"
-        hull_transform.child_frame_id = "wolf_hull"
+        hull_transform.header.frame_id = "map"
+        hull_transform.child_frame_id = "odom"
         hull_transform.transform.translation.x = 0.0
         hull_transform.transform.translation.y = 0.0
         hull_transform.transform.translation.z = self.current_depth
@@ -102,11 +96,9 @@ class Pixhawk:
         # establish publishers for sensor data, and thruster controls
         rc = OverrideRCIn()
         self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
-        self.yaw_pub = rospy.Publisher("wolf_yaw", Float64, queue_size=10)
-        self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
 
         # subscribe to our target movement values as well as our raw sensor data
-        rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
+        rospy.Subscriber("cmd_vel", Twist, self.vel_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
         rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
 
@@ -135,6 +127,7 @@ class Pixhawk:
                 rospy.logerr("WATCHDOG TIMER TRIGGERED: SENSOR DATA IS TOO SLOW")
 '''
             self.override_pub.publish(rc)
+            self.update_transform()
             rate.sleep()
 
 

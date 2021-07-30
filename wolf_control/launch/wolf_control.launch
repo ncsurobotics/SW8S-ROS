@@ -13,7 +13,7 @@
         <param name="max_loop_frequency" value="10.0" />
         <param name="min_loop_frequency" value="10.0" />
         <param name="topic_from_controller" value="wolf_control/depth_output" />
-        <param name="topic_from_plant" value="wolf_depth" />
+        <param name="topic_from_plant" value="wolf_control/depth_state" />
         <param name="setpoint_topic" value="wolf_control/depth_setpoint" />
         <param name="setpoint_timeout" value="-1" />
 
@@ -28,7 +28,7 @@
         <param name="max_loop_frequency" value="10.0" />
         <param name="min_loop_frequency" value="10.0" /> -->
         <param name="topic_from_controller" value="wolf_control/yaw_output" />
-        <param name="topic_from_plant" value="wolf_yaw" />
+        <param name="topic_from_plant" value="wolf_control/yaw_state" />
         <param name="setpoint_topic" value="wolf_control/yaw_setpoint" />
         <param name="angle_error" value="true" />
         <param name="angle_wrap" value="360.0" />

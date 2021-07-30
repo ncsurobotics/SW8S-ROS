@@ -34,7 +34,7 @@ class Gazebo:
     coordinate_frame_broadcaster = None
 
     # move into class vars
-    def twist_callback(self, data):
+    def vel_callback(self, data: Twist):
         self.pitch_rate = data.angular.y
         self.roll_rate = data.angular.x
         self.vertical_rate = data.linear.z
@@ -43,26 +43,20 @@ class Gazebo:
         self.strafe_rate = data.linear.y
 
     # read the raw depth sensor data and publish it to the rest of our nodes
-    def depth_callback(self, data):
+    def depth_callback(self, data: Float64):
         self.current_depth = data.data
-        self.depth_pub.publish(data.data)
-
-        self.update_transform()
 
     # read the raw orientation sensor data and publish it to the rest of our nodes
     # (THIS NEEDS TO BE CHANGED, CURRENTLY USES MAGNETIC SENSOR AND NOT IMU BECAUSE OF BROKEN SIMULATOR)
-    def imu_callback(self, data):
+    def imu_callback(self, data: Float64):
         self.current_yaw = data.data
-        self.yaw_pub.publish(data.data)
-
-        self.update_transform()
 
     # updates the hulls position in TF2
     def update_transform(self):
         hull_transform = TransformStamped()
         hull_transform.header.stamp = rospy.Time.now()
-        hull_transform.header.frame_id = "world"
-        hull_transform.child_frame_id = "wolf_hull"
+        hull_transform.header.frame_id = "map"
+        hull_transform.child_frame_id = "odom"
         hull_transform.transform.translation.x = 0.0
         hull_transform.transform.translation.y = 0.0
         hull_transform.transform.translation.z = self.current_depth
@@ -90,11 +84,9 @@ class Gazebo:
         rc.data.append(0.0);
 
         self.override_pub = rospy.Publisher("wolf_RC_output", Float32MultiArray, queue_size=10)
-        self.yaw_pub = rospy.Publisher("wolf_yaw", Float64, queue_size=10)
-        self.depth_pub = rospy.Publisher("wolf_depth", Float64, queue_size=10)
 
         # subscribe to our target movement values as well as our raw sensor data
-        rospy.Subscriber("wolf_twist", Twist, self.twist_callback)
+        rospy.Subscriber("cmd_vel", Twist, self.vel_callback)
         rospy.Subscriber("wolf_gazebo/global_alt", Float64, self.depth_callback)
         rospy.Subscriber("wolf_gazebo/compass_hdg", Float64, self.imu_callback)
 
@@ -112,6 +104,7 @@ class Gazebo:
             rc.data[5] = self.strafe_rate
 
             self.override_pub.publish(rc)
+            self.update_transform()
             rate.sleep()
 
 

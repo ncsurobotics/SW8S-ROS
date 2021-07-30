@@ -38,7 +38,7 @@ import rospy
 from geometry_msgs.msg import Twist
 
 def talker():
-    pub = rospy.Publisher('wolf_twist_setpoint', Twist, queue_size=10)
+    pub = rospy.Publisher('wolf_control/goal', Twist, queue_size=10)
     rospy.init_node('talker', anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():

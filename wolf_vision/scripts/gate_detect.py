@@ -19,7 +19,7 @@ class gate_detector:
 
     def __init__(self):
         self.image_sub = rospy.Subscriber("wolf_camera1/image_raw", Image, self.frame_callback)
-        self.center_pub = rospy.Publisher("gate_center", String, queue_size=10)
+        self.center_pub = rospy.Publisher("wolf_vision/gate_center", String, queue_size=10)
         self.final_pub = rospy.Publisher("wolf_camera1/image_final", Image, queue_size=10)
         self.contour_pub = rospy.Publisher("wolf_camera1/image_contour", Image, queue_size=10)
 
@@ -148,7 +148,7 @@ class gate_detector:
         return [x,y]
 
 
-    def frame_callback(self,data):
+    def frame_callback(self,data: Image):
         self.bridge = CvBridge()
         frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
         height, width, _ = frame.shape

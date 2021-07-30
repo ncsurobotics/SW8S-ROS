@@ -13,24 +13,20 @@ After the project has been built, a simulated version of Seawolf-8 can be launch
 
 ## Important ROS Topics
 The following is a list of major ROS topics in this project that a developer should be aware of
-* wolf_twist_setpoint
+* wolf_control/goal
     * Sets setpoints for the sub to move towards
         * angular x y z are in terms of the subs magnetic compass and setting these will make the pose controller align the sub to this magnetic heading
         * linear z is in terms of depth below surface, and setting it will cause the sub to submerge to the given depth
         * linear x,y act as a speed vectors and exist in terms of "world" coordinates, an absolute reference frame. These values should generally not be set above 0.3, and control the speed and direction the sub travels in. 
-* wolf_twist
+* cmd_vel
     * contains geometry_msgs/Twist messages that set the sub's linear (up, forward, left, etc.) and angular (pitch, roll, yaw) velocities directly
     * should not be set outside of pose controllers
-* wolf_yaw
-    * current yaw of the sub in degrees (uses magnetic compass but can be changed)
-* wolf_depth
-    * depth of the sub in meters
 
 ## Important TF2 Frames
-* world
+* map
     * just a constant reference frame set on startup
-* wolf_hull
-    * reference frame oriented with the general (center) hull of the sub. 
+* odom
+    * reference frame oriented with the hull of the sub. 
 
 ## Running ROS Tests
 To run the tests, use this command
