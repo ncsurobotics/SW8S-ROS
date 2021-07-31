@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 import rospy
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TransformStamped
+from std_msgs.msg import String
 from enum import Enum
 import tf2_ros
-from geometry_msgs.msg import TransformStamped
+
 
 class mission_states(Enum):
     STOP = -1
@@ -19,6 +20,7 @@ def mission():
     rospy.init_node('mission_controller', anonymous=True)
     state = mission_states.SUBMERGE
     goal_pub = rospy.Publisher('wolf_control/goal', Twist, queue_size=10)
+    state_pub = rospy.Publisher('wolf_control/mission_state', String, queue_size=10)
     tf_buffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tf_buffer)
     rate = rospy.Rate(10) # 10hz
@@ -59,6 +61,7 @@ def mission():
                     saved_goal = None
                     state = mission_states.STOP
             timer += 1
+            state_pub.publish(state.name)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             rospy.logerr("mission_code: error finding frame")
         rate.sleep()
