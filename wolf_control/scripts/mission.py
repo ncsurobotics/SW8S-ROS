@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from pickle import STOP
 import rospy
 from geometry_msgs.msg import Twist
 from enum import Enum
