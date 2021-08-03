@@ -250,7 +250,7 @@ class gate_detector:
             #make a TF2 frame for the gate
             gate_transform = TransformStamped()
             gate_transform.header.stamp = rospy.Time.now()
-            gate_transform.header.frame_id = "odom"
+            gate_transform.header.frame_id = "base_link"
             gate_transform.child_frame_id = "gate"
             gate_transform.transform.translation.x = math.cos(angle_to_gate[0])
             gate_transform.transform.translation.y = math.sin(angle_to_gate[0])

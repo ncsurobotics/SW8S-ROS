@@ -29,7 +29,7 @@ def mission():
     saved_goal = None
     while not rospy.is_shutdown():
         try:
-            odom: TransformStamped = tf_buffer.lookup_transform("map", "odom", rospy.Time(0))
+            odom: TransformStamped = tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0))
             if state == mission_states.STOP:
                 goal = Twist()
                 goal.linear.z = submerge_depth
@@ -43,7 +43,7 @@ def mission():
                     timer = 0
                     saved_goal = None        
             elif state == mission_states.MOVE_TO_GATE:
-                gate_vector: TransformStamped = tf_buffer.lookup_transform("map", "gate", rospy.Time(0))
+                gate_vector: TransformStamped = tf_buffer.lookup_transform("odom", "gate", rospy.Time(0))
                 goal = Twist()
                 goal.linear.x = gate_vector.transform.translation.x * 1.3
                 goal.linear.y = gate_vector.transform.translation.y
