@@ -71,8 +71,8 @@ class Pixhawk:
     def update_transform(self):
         hull_transform = TransformStamped()
         hull_transform.header.stamp = rospy.Time.now()
-        hull_transform.header.frame_id = "map"
-        hull_transform.child_frame_id = "odom"
+        hull_transform.header.frame_id = "odom"
+        hull_transform.child_frame_id = "base_link"
         hull_transform.transform.translation.x = 0.0
         hull_transform.transform.translation.y = 0.0
         hull_transform.transform.translation.z = self.current_depth

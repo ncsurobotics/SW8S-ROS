@@ -45,7 +45,7 @@ class Controller:
         self.world_goal = Vector3Stamped()
         self.world_goal.vector.x = twist.linear.x
         self.world_goal.vector.y = twist.linear.y
-        self.world_goal.header.frame_id = "map"
+        self.world_goal.header.frame_id = "odom"
 
     def depth_control_callback(self, controller_output: Float64):
         self.depth_control_out = controller_output.data
@@ -75,7 +75,7 @@ class Controller:
 
             #get the current robot position and give the appropriate pieces to the PID controllers
             try:
-                odom = tf_buffer.lookup_transform("map", "odom", rospy.Time(0))
+                odom = tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0))
 
                 #publish yaw & depth
                 rot = (odom.transform.rotation.x, odom.transform.rotation.y, odom.transform.rotation.z, odom.transform.rotation.w)

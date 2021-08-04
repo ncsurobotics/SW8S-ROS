@@ -39,8 +39,8 @@ class Gazebo:
         self.roll_rate = data.angular.x
         self.vertical_rate = data.linear.z
         self.yaw_rate = data.angular.z
-        self.forward_rate = data.linear.x
-        self.strafe_rate = data.linear.y
+        self.forward_rate = data.linear.y
+        self.strafe_rate = data.linear.x
 
     # read the raw depth sensor data and publish it to the rest of our nodes
     def depth_callback(self, data: Float64):
@@ -55,8 +55,8 @@ class Gazebo:
     def update_transform(self):
         hull_transform = TransformStamped()
         hull_transform.header.stamp = rospy.Time.now()
-        hull_transform.header.frame_id = "map"
-        hull_transform.child_frame_id = "odom"
+        hull_transform.header.frame_id = "odom"
+        hull_transform.child_frame_id = "base_link"
         hull_transform.transform.translation.x = 0.0
         hull_transform.transform.translation.y = 0.0
         hull_transform.transform.translation.z = self.current_depth
