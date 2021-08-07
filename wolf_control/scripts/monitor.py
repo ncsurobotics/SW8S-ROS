@@ -43,7 +43,7 @@ class Monitor:
         stdscr.nodelay(1)
         while not rospy.is_shutdown():
             stdscr.erase()
-            stdscr.addstr(0, 0, 'Battery Voltage: {}V'.format(self.voltage))
+            stdscr.addstr(0, 0, 'Battery Voltage: {:.3}V'.format(self.voltage))
             stdscr.addstr(2, 0, 'Mission State:   {}'.format(self.state))
             stdscr.addstr(0, 35, 'Current RC Rates:      Linear {:.3}, {:.3}, {:.3}; Angular: {:.3}, {:.3}, {:.3}'
                         .format(self.rcrates.linear.x, self.rcrates.linear.y, self.rcrates.linear.z, self.rcrates.angular.x, self.rcrates.angular.y, self.rcrates.angular.z))
