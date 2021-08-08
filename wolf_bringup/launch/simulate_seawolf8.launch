@@ -7,5 +7,5 @@
     
     <node name="seawolf_gazebo_controller" pkg="wolf_serial" type="gazebo.py" launch-prefix="bash -c 'sleep 5; $0 $@' "/>
     <node name="detector" pkg="wolf_vision" type="gate_detect.py" launch-prefix="bash -c 'sleep 5; $0 $@' "/>
-    <node name="mission" pkg="wolf_control" type="mission.py" launch-prefix="bash -c 'sleep 5; $0 $@' "/>
-  </launch>
+</launch>
+
