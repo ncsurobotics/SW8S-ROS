@@ -4,7 +4,7 @@ from geometry_msgs.msg import Twist, TransformStamped
 from std_msgs.msg import String
 from enum import Enum
 import tf2_ros
-
+import math
 
 class mission_states(Enum):
     STOP = -1
@@ -49,6 +49,7 @@ def mission():
                 goal.linear.x = gate_vector.transform.translation.x * 1.3
                 goal.linear.y = gate_vector.transform.translation.y
                 goal.linear.z = submerge_depth
+                goal.angular.z = -math.atan2(gate_vector.transform.translation.y, gate_vector.transform.translation.x)
                 goal_pub.publish(goal)
                 if timer > 40:
                     saved_goal = goal
