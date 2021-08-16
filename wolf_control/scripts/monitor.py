@@ -58,6 +58,10 @@ class Monitor:
             if c == ord('s'):
                 self.set_pose = not self.set_pose
 
+            #draw instructions on how to use the program
+            if not self.set_pose:
+                stdscr.addstr(5, 30, 'Press "s" to publish a message to wolf_control/goal')
+                stdscr.addstr(6, 30, 'Press "q" to quit this program')
             stdscr.refresh()
             
             #draw boxes if applicable
