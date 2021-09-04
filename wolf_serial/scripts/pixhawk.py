@@ -100,7 +100,7 @@ class Pixhawk:
         # subscribe to our target movement values as well as our raw sensor data
         rospy.Subscriber("cmd_vel", Twist, self.vel_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
-        rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
+        rospy.Subscriber("/odometry/filtered", Odometry, self.imu_callback)
 
         # establish coordinate frame and its broadcaster
         self.coordinate_frame_broadcaster = tf2_ros.TransformBroadcaster()

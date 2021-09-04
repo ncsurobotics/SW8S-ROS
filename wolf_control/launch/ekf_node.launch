@@ -1,5 +1,5 @@
 <launch>
   <node pkg="robot_localization" type="ekf_localization_node" name="ekf_node">
-    <rosparam command="load" file="$(find wolf_control)/config/ekf_node_config"/>
+    <rosparam command="load" file="$(find wolf_control)/config/ekf_node_config.yaml"/>
   </node>
 </launch>
