@@ -1,0 +1,4 @@
+<launch>
+    <node name="forward" pkg="wolf_vision" type="video_forwarder.py" args="">
+    <node name="detector" pkg="wolf_vision" type="gate_detect.py" launch-prefix="bash -c 'sleep 5; $0 $@' "/>
+</launch>
