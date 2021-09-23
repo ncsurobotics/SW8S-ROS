@@ -23,7 +23,7 @@ class gate_detector:
     reset_focus = 0
 
     is_debug = False
-
+    show_window = True # display imshow() windows
     #sim values and real values differ GREATLY
     focal_length = 381.36115
 
@@ -48,17 +48,17 @@ class gate_detector:
         # apply a blur to reduce # of contours
         # 11 - clean water, 5 - murky water
         blur = cv2.bilateralFilter(img,11,100,100)
-        # Canny edge detection
         edge = cv2.Canny(blur,5,21,apertureSize=3,L2gradient=True)
-        # produce the contours and place contour over original image
         contours, _ = cv2.findContours(edge,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+
+        # produces copy of original and draw Canny contours
         out = img.copy()
         for i in range(len(contours)):
             out = cv2.drawContours(out,contours,i,(255*random.random(),0,255*random.random()),1)
         # contour display
         if self.is_debug:
             self.contour_pub.publish(self.bridge.cv2_to_imgmsg(out, "bgr8"))
-        cv2.imshow('output',out)
+        if self.show_window: cv2.imshow('output',out)
 
         ### filter contours
         # [[x,y,radius],[x,y,radius]]
@@ -88,16 +88,18 @@ class gate_detector:
                 # add the center of contours to location
                 vert_location.append([int(x),int(y), radius])
                 # highlighting contour to different color
-                out_filter = cv2.drawContours(out,contours,i,(0,0,255),2)
-                out_circle = cv2.circle(out_filter,(int(x),int(y)),radius,(0,255,0),2)
-                cv2.imshow('output_circle',out_circle)
+                if self.show_window:
+                    out_filter = cv2.drawContours(out,contours,i,(0,0,255),2)
+                    out_circle = cv2.circle(out_filter,(int(x),int(y)),radius,(0,255,0),2)
+                    cv2.imshow('output_circle',out_circle)
             if radius > width/5 and (abs(angle) > 75 and abs(angle) < 95) and aspect_ratio > .3:
                 #print(["dark circle: ", [int(x),int(y)],radius,angle,aspect_ratio])
                 hori_location.append([int(x), int(y), radius])
                 # filtered output window
-                out_filter = cv2.drawContours(out,contours,i,(0,0,125),2)
-                out_circle = cv2.circle(out_filter,(int(x),int(y)),radius,(0,125,0),2)
-                cv2.imshow('output_circle',out_circle)
+                if self.show_window:
+                    out_filter = cv2.drawContours(out,contours,i,(0,0,125),2)
+                    out_circle = cv2.circle(out_filter,(int(x),int(y)),radius,(0,125,0),2)
+                    cv2.imshow('output_circle',out_circle)
         ### adding labels
         # simplify the contours of interest
         amount_identified = len(vert_location)
@@ -208,6 +210,8 @@ class gate_detector:
         self.bridge = CvBridge()
         frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
         height, width, _ = frame.shape
+
+        # resize the image to less than 100000 pixels
         totalPxl = height*width
         reductionRatio = 1
         while(totalPxl > 100000):
@@ -219,20 +223,24 @@ class gate_detector:
         resize_dim = (int(frame.shape[1]/reductionRatio),int(frame.shape[0]/reductionRatio))
         frame = cv2.resize(frame,resize_dim)
 
+        if self.show_window:
+            cv2.imshow('gate_original', frame)
+            cv2.waitKey(20)
+        
         gateLength = None
         
-        cv2.imshow('gate_original', frame)
-        cv2.waitKey(20)
-        
-        # start processing
+        # obtain points of interests and method of finding it
         points = self.contourProcess(frame, resize_dim[0], resize_dim[1])
+
+        # extract the method and gate length
         if len(points) != 0:
-            self.gate_length = abs(points.pop(-1)) #pop out the length of the gate
+            self.gate_length = abs(points.pop(-1))
             self.last_id_type = self.id_type
             self.id_type = points.pop(-1)
 
-        # Discard results - if change in gate length exceeds x (5) pixels, stop updating focus point
-        # useful to prevent sudden unwanted edges
+        # Discard results
+        # check if the points meets the expectation of a gate
+        # based on previous results
         if abs(self.gate_length - self.last_gate_length) < width/12 and len(points): 
             discard_result = False
             # discard if the focus point have not been detected for a while
@@ -244,7 +252,7 @@ class gate_detector:
         else: 
             discard_result = True
         
-        # update focus point
+        # update focus point, and decrement counter when not discarded
         if not discard_result:
             self.past_point = self.averageCenter(points)
             if len(self.past_point) == 2:
@@ -253,26 +261,30 @@ class gate_detector:
                 self.focus_point[1] = int(self.focus_point[1])
             if (self.reset_focus > 10): self.reset_focus = 0
             elif (self.reset_focus > -100): self.reset_focus -= 5
-        # if focus point has not been updated for too long (shaky camera)
+        # reset the counter and clear result
         elif self.reset_focus == 20:
             self.reset_focus = 0
             self.focus_point.clear()
+        # increment counter when discarded
         else:
             if (self.reset_focus < 0): self.reset_focus += 10
             else: self.reset_focus += 1
 
-        final = frame.copy()
-        #print([discard_result,self.focus_point, points, self.reset_focus])
-        if len(self.focus_point) == 2:
-            # Final center point here
-            cv2.putText(final,"focus",(self.focus_point[0],self.focus_point[1]),cv2.FONT_HERSHEY_PLAIN,fontScale=1,color=(0,0,255))
-            cv2.circle(final,(self.focus_point[0],self.focus_point[1]),radius=10,color=(0,0,255),thickness=1)
-            cv2.circle(final,(int(width/2),int(height/2)),radius=5,color=(0,0,255),thickness=1)
-            targetoffset = self.offset([int(width/2),int(height/2)],self.focus_point)
-            #draw edge points
-            if gateLength != None:
-                cv2.circle(final,(int(self.focus_point[0]+gateLength),int(self.focus_point[1])),radius=5,color=(0,255,0),thickness=2)
+        if self.show_window or self.is_debug: final = frame.copy()
 
+        if len(self.focus_point) == 2:
+            # draw center point and edge of gate
+            if self.show_window or self.is_debug:
+                cv2.putText(final,"focus",(self.focus_point[0],self.focus_point[1]),cv2.FONT_HERSHEY_PLAIN,fontScale=1,color=(0,0,255))
+                cv2.circle(final,(self.focus_point[0],self.focus_point[1]),radius=10,color=(0,0,255),thickness=1)
+                cv2.circle(final,(int(width/2),int(height/2)),radius=5,color=(0,0,255),thickness=1)
+                #draw edge points
+                if gateLength != None:
+                    cv2.circle(final,(int(self.focus_point[0]+gateLength),int(self.focus_point[1])),radius=5,color=(0,255,0),thickness=2)
+
+            # offset from the center of image
+            targetoffset = self.offset([int(width/2),int(height/2)],self.focus_point)
+            
             #convert offset into angles to target
             angle_to_gate = [math.atan(targetoffset[0] / self.focal_length), math.atan(targetoffset[1] / self.focal_length)]
             if self.is_debug:
@@ -293,7 +305,8 @@ class gate_detector:
             tf2_ros.TransformBroadcaster().sendTransform(gate_transform)
 
         self.last_gate_length = self.gate_length
-        cv2.imshow("final",final)
+        
+        if self.show_window: cv2.imshow("final",final)
 
         if self.is_debug:
             self.final_pub.publish(self.bridge.cv2_to_imgmsg(final, "bgr8"))
