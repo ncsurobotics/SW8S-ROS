@@ -47,7 +47,6 @@ class Gazebo:
         self.current_depth = data.data
 
     # read the raw orientation sensor data and publish it to the rest of our nodes
-    # (THIS NEEDS TO BE CHANGED, CURRENTLY USES MAGNETIC SENSOR AND NOT IMU BECAUSE OF BROKEN SIMULATOR)
     def imu_callback(self, data: Float64):
         self.current_yaw = data.data
 
@@ -60,7 +59,7 @@ class Gazebo:
         hull_transform.transform.translation.x = 0.0
         hull_transform.transform.translation.y = 0.0
         hull_transform.transform.translation.z = self.current_depth
-        q = tf_conversions.transformations.quaternion_from_euler(0, 0, math.radians(self.current_yaw))
+        q = tf_conversions.transformations.quaternion_from_euler(0, 0, self.current_yaw)
         hull_transform.transform.rotation.x = q[0]
         hull_transform.transform.rotation.y = q[1]
         hull_transform.transform.rotation.z = q[2]

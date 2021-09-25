@@ -93,7 +93,7 @@ class Controller:
             
             if self.world_goal:
                 try:
-                    hull_goal = tf_buffer.transform(self.world_goal, 'odom')
+                    hull_goal = tf_buffer.transform(self.world_goal, 'base_link')
                     cmd_vel.linear.x = hull_goal.vector.x
                     cmd_vel.linear.y = hull_goal.vector.y
                 except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):

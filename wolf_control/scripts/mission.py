@@ -38,6 +38,7 @@ def mission():
             if state == mission_states.SUBMERGE:
                 goal = Twist()
                 goal.linear.z = submerge_depth
+                goal.angular.z = odom.transform.rotation.z
                 goal_pub.publish(goal)
                 if checkTolerance(odom.transform.translation.z, submerge_depth):
                     state = mission_states.MOVE_TO_GATE  
@@ -46,18 +47,18 @@ def mission():
             elif state == mission_states.MOVE_TO_GATE:
                 gate_vector: TransformStamped = tf_buffer.lookup_transform("odom", "gate", rospy.Time(0))
                 goal = Twist()
-                goal.linear.x = gate_vector.transform.translation.x * 1.3
-                goal.linear.y = gate_vector.transform.translation.y
+                goal.linear.x = gate_vector.transform.translation.y
+                goal.linear.y = -gate_vector.transform.translation.x
                 goal.linear.z = submerge_depth
-                goal.angular.z = -math.atan2(gate_vector.transform.translation.y, gate_vector.transform.translation.x)
+                goal.angular.z = math.atan2(gate_vector.transform.translation.y, gate_vector.transform.translation.x)
                 goal_pub.publish(goal)
-                if timer > 40:
+                if timer > 140:
                     saved_goal = goal
                     state = mission_states.MOVE_THROUGH_GATE
                     timer = 0
             elif state == mission_states.MOVE_THROUGH_GATE:
                 goal_pub.publish(saved_goal)
-                if timer > 80:
+                if timer > 240:
                     timer = 0
                     saved_goal = None
                     state = mission_states.STOP
