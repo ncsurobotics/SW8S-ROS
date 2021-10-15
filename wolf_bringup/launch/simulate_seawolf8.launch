@@ -1,6 +1,6 @@
 <launch>
     <node name="tcpserver" pkg="ros_tcp_endpoint" type="default_server_endpoint.py"/>
-    <rosparam param="ROS_IP">152.14.88.15</rosparam>>
+    <rosparam param="ROS_IP">192.168.86.29</rosparam>>
     <include file="$(find wolf_control)/launch/wolf_control.launch" pass_all_args="true"/>
     <node name="seawolf_gazebo_controller" pkg="wolf_serial" type="gazebo.py" launch-prefix="bash -c 'sleep 5; $0 $@' "/>
     <node name="detector" pkg="wolf_vision" type="gate_detect.py" launch-prefix="bash -c 'sleep 5; $0 $@' "/>
