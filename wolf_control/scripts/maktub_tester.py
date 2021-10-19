@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from time import time
 import rospy
 import unittest
 from std_msgs.msg import String
@@ -7,12 +8,10 @@ class MaktubTest(unittest.TestCase):
     def testMaktub(self):
         limit = 300;
         startTime = rospy.Time.now()
-        while True:
-            message: String = rospy.wait_for_message("/maktub/test_log", String)
+        while not rospy.is_shutdown():
+            message: String = rospy.wait_for_message("/maktub/test_log", String, timeout=limit)
             if message.data == "Test successfully completed":
                 return
-            if (rospy.Time.now() - startTime).to_sec() > 300:
-                self.fail("Time has run out to complete the test!")
 
 if __name__ == '__main__':
     import rosunit
