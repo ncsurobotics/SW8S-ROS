@@ -39,7 +39,6 @@ class StateMachine:
         self.initialState = initialState
         self.currentState = initialState
         self.endStates = endStates
-        print(type(self.endStates))
         if not type(self.endStates) == list:
             self.endStates = [self.endStates]
         self.callback = callback
