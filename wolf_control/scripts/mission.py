@@ -5,68 +5,102 @@ from std_msgs.msg import String
 from enum import Enum
 import tf2_ros
 import math
+from sm import *
 
-class mission_states(Enum):
-    STOP = -1
-    SUBMERGE = 0
-    MOVE_TO_GATE = 1
-    MOVE_THROUGH_GATE = 2
+
+class STOP(State):
+    def execute(args):
+        goal = Twist()
+        goal.linear.z = args["submerge_depth"]
+        args["goal_pub"].publish(goal)
+
+
+class SUBMERGE(State):
+    def execute(args):
+        goal = Twist()
+        goal.linear.z = args["submerge_depth"]
+        args["goal_pub"].publish(goal)
+        if checkTolerance(args["odom"].transform.translation.z, args["submerge_depth"]):
+            args["timer"] = 0
+            args["saved_goal"] = None
+            return (MOVE_TO_GATE,0)
+
+
+class MOVE_TO_GATE(State):
+    def execute(args):
+        gate_vector: TransformStamped = args["tf_buffer"].lookup_transform(
+            "odom", "gate", rospy.Time(0)
+        )
+        goal = Twist()
+        goal.linear.x = gate_vector.transform.translation.x * 1.3
+        goal.linear.y = gate_vector.transform.translation.y
+        goal.linear.z = args["submerge_depth"]
+        goal.angular.z = -math.atan2(
+            gate_vector.transform.translation.y, gate_vector.transform.translation.x
+        )
+        args["goal_pub"].publish(goal)
+        if args["timer"] > 40:
+            args["saved_goal"] = goal
+            args["timer"] = 0
+            return (MOVE_THROUGH_GATE,0)
+
+
+class MOVE_THROUGH_GATE(State):
+    def execute(args):
+        args["goal_pub"].publish(args["saved_goal"])
+        if args["timer"] > 80:
+            args["timer"] = 0
+            args["saved_goal"] = None
+            return (STOP,)
+
+
+def callback(sm):
+    sm.pub.publish(sm.currentState.__name__)
+
 
 def checkTolerance(current, wanted):
     tolerance = 0.1
     return current < wanted + tolerance and current > wanted - tolerance
-        
-def mission():
-    rospy.init_node('mission_controller', anonymous=True)
-    state = mission_states.SUBMERGE
-    goal_pub = rospy.Publisher('wolf_control/goal', Twist, queue_size=10)
-    state_pub = rospy.Publisher('wolf_control/mission_state', String, queue_size=10)
-    tf_buffer = tf2_ros.Buffer()
-    listener = tf2_ros.TransformListener(tf_buffer)
-    rate = rospy.Rate(10) # 10hz
 
-    submerge_depth = -1
-    timer = 0
-    saved_goal = None
+
+def mission():
+    rospy.init_node("mission_controller", anonymous=True)
+
+
+    sm = StateMachine(
+        SUBMERGE,
+        STOP,
+        [STOP, SUBMERGE, MOVE_TO_GATE, MOVE_THROUGH_GATE],
+        callback,
+        args={
+            "submerge_depth": -1,
+            "timer": 0,
+            "odom": None,
+            "goal_pub": rospy.Publisher("wolf_control/goal", Twist, queue_size=10),
+            "saved_goal": None,
+            "tf_buffer": tf2_ros.Buffer(),
+        },
+        publisher=rospy.Publisher("wolf_control/mission_state", String, queue_size=10),
+    )
+    listener = tf2_ros.TransformListener(sm.args["tf_buffer"])
+    rate = rospy.Rate(10)  # 10hz
     while not rospy.is_shutdown():
         try:
-            odom: TransformStamped = tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0))
-            if state == mission_states.STOP:
-                goal = Twist()
-                goal.linear.z = submerge_depth
-                goal_pub.publish(goal)
-            if state == mission_states.SUBMERGE:
-                goal = Twist()
-                goal.linear.z = submerge_depth
-                goal_pub.publish(goal)
-                if checkTolerance(odom.transform.translation.z, submerge_depth):
-                    state = mission_states.MOVE_TO_GATE  
-                    timer = 0
-                    saved_goal = None        
-            elif state == mission_states.MOVE_TO_GATE:
-                gate_vector: TransformStamped = tf_buffer.lookup_transform("odom", "gate", rospy.Time(0))
-                goal = Twist()
-                goal.linear.x = gate_vector.transform.translation.x * 1.3
-                goal.linear.y = gate_vector.transform.translation.y
-                goal.linear.z = submerge_depth
-                goal.angular.z = -math.atan2(gate_vector.transform.translation.y, gate_vector.transform.translation.x)
-                goal_pub.publish(goal)
-                if timer > 40:
-                    saved_goal = goal
-                    state = mission_states.MOVE_THROUGH_GATE
-                    timer = 0
-            elif state == mission_states.MOVE_THROUGH_GATE:
-                goal_pub.publish(saved_goal)
-                if timer > 80:
-                    timer = 0
-                    saved_goal = None
-                    state = mission_states.STOP
-            timer += 1
-            state_pub.publish(state.name)
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            sm.args["odom"] = sm.args["tf_buffer"].lookup_transform(
+                "odom", "base_link", rospy.Time(0)
+            )
+            stepSMs([sm])
+            sm.args["timer"] += 1
+        except (
+            tf2_ros.LookupException,
+            tf2_ros.ConnectivityException,
+            tf2_ros.ExtrapolationException,
+        ):
             rospy.logerr("mission_code: error finding frame")
         rate.sleep()
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     try:
         mission()
     except rospy.ROSInterruptException:
