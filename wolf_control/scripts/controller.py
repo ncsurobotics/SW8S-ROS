@@ -97,7 +97,7 @@ class Controller:
                     cmd_vel.linear.x = hull_goal.vector.x
                     cmd_vel.linear.y = hull_goal.vector.y
                 except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-                    pass
+                    rospy.logerr("world pose not found")
 
             self.vel_pub.publish(cmd_vel)
             rate.sleep()
