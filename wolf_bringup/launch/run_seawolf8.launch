@@ -7,10 +7,6 @@
   <node name="set_mode" pkg="mavros" type="mavsys" args="mode -c ALT_HOLD" launch-prefix="bash -c 'sleep 9.0; $0 $@' "/>
   <node name="arm_rover" pkg="mavros" type="mavsafety" args="arm" launch-prefix="bash -c 'sleep 10.5; $0 $@' "/>
   <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
-  <!-- <node name="dummypub" pkg="wolf_control" type="dummypub.py" launch-prefix="bash -c 'sleep 20; $0 $@' "/>
   <node name="camera_forwarder" pkg="wolf_vision" type="camera_forwarder.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
-  <node name="gate_detector" pkg="wolf_vision" type="gate_detect.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/> -->
+  <node name="gate_detector" pkg="wolf_vision" type="gate_detect.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
 </launch>
-
-
-
