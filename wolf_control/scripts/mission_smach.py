@@ -2,33 +2,29 @@
 import rospy
 from geometry_msgs.msg import Twist, TransformStamped
 from std_msgs.msg import String
-from enum import Enum
 import tf2_ros
 import math
 import smach
-import smach_ros
 
 # Using smach library to implement a basic state machine that functions as mission.py
 # http://wiki.ros.org/smach
 # roslaunch wolf_bringup state_machine_viewer.launch to run this statemachine
 # there is also smach_viewer to generate an overview, but that is broken for noetic (python 3)
-
 # Each state is it's own class 
 # The states are connected by "transitions" dictionary, {return value : next state id}
-
 # data passed between states needs to be declared as userdata before starting the statemachine
 # as "remapping" dictionary, {state input_key : userdata variable}
 
-tf_buffer = tf2_ros.Buffer()
 # a list of states
 # mostly needed for RequestOdom and RequestGate where they use this list to go back
+# might as well keep all the states here
 gate_sequence_outcomes = ['Start','Toward','Through','Complete','Finish'] 
 requests = ['RequestOdom','RequestGate']
 
 def mission():
     rospy.init_node('mission_state_machine', anonymous=True)
     state_pub = rospy.Publisher('wolf_control/mission_state', String, queue_size=10)
-    #tf_buffer = tf2_ros.Buffer()
+    tf_buffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tf_buffer)
     rate = rospy.Rate(10)
     # statemachine container
@@ -206,9 +202,11 @@ class lookup_odom_baselink(smach.State):
                                 requests[0]],
                         input_keys=['state_in'], output_keys=['odom_out']):
         super().__init__(outcomes=outcomes, input_keys=input_keys, output_keys=output_keys)
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
     def execute(self, ud):
         try:
-            odom: TransformStamped = tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0))
+            odom: TransformStamped = self.tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0))
             ud.odom_out = odom       
             return gate_sequence_outcomes[ud.state_in]
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
@@ -221,9 +219,11 @@ class lookup_odom_gate(smach.State):
                                 requests[1]],
                         input_keys=['state_in'], output_keys=['odom_out']):
         super().__init__(outcomes=outcomes, input_keys=input_keys, output_keys=output_keys)
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
     def execute(self, ud):
         try:
-            odom: TransformStamped = tf_buffer.lookup_transform("odom", "gate", rospy.Time(0))
+            odom: TransformStamped = self.tf_buffer.lookup_transform("odom", "gate", rospy.Time(0))
             ud.odom_out = odom       
             return gate_sequence_outcomes[ud.state_in]
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
