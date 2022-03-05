@@ -47,18 +47,18 @@ def mission():
             elif state == mission_states.MOVE_TO_GATE:
                 gate_vector: TransformStamped = tf_buffer.lookup_transform("odom", "gate", rospy.Time(0))
                 goal = Twist()
-                goal.linear.x = gate_vector.transform.translation.y
-                goal.linear.y = -gate_vector.transform.translation.x
+                goal.linear.x = gate_vector.transform.translation.x
+                goal.linear.y = gate_vector.transform.translation.y
                 goal.linear.z = submerge_depth
                 goal.angular.z = math.atan2(gate_vector.transform.translation.y, gate_vector.transform.translation.x)
                 goal_pub.publish(goal)
-                if timer > 140:
+                if timer > 60:
                     saved_goal = goal
                     state = mission_states.MOVE_THROUGH_GATE
                     timer = 0
             elif state == mission_states.MOVE_THROUGH_GATE:
                 goal_pub.publish(saved_goal)
-                if timer > 240:
+                if timer > 140:
                     timer = 0
                     saved_goal = None
                     state = mission_states.STOP

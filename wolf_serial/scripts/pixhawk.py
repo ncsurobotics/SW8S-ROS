@@ -69,36 +69,6 @@ class Pixhawk:
         depth_pose.pose.covariance = [i * 0.05 for i in identity]
         self.depth_pose_pub.publish(depth_pose)
 
-
-    # read the raw orientation sensor data and publish it to the rest of our nodes
-    # (THIS NEEDS TO BE CHANGED, CURRENTLY USES MAGNETIC SENSOR AND NOT IMU BECAUSE OF BROKEN SIMULATOR)
-    def imu_callback(self, data: Imu):
-        quat = [data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w]
-
-        euler = tf_conversions.transformations.euler_from_quaternion(quat)
-        self.current_yaw = euler[2]
-
-        # check how much time has passed since last update
-        self.delta_time = rospy.get_time() - self.initial_time
-        self.initial_time = rospy.get_time()
-
-    # updates the hulls position in TF2
-    def update_transform(self):
-        hull_transform = TransformStamped()
-        hull_transform.header.stamp = rospy.Time.now()
-        hull_transform.header.frame_id = "odom"
-        hull_transform.child_frame_id = "base_link"
-        hull_transform.transform.translation.x = 0.0
-        hull_transform.transform.translation.y = 0.0
-        hull_transform.transform.translation.z = self.current_depth
-        q = tf_conversions.transformations.quaternion_from_euler(0, 0, self.current_yaw)
-        hull_transform.transform.rotation.x = q[0]
-        hull_transform.transform.rotation.y = q[1]
-        hull_transform.transform.rotation.z = q[2]
-        hull_transform.transform.rotation.w = q[3]
-
-        self.coordinate_frame_broadcaster.sendTransform(hull_transform)
-
     def __init__(self):
         # init ROS
         rospy.init_node('pixhawk', anonymous=False)
@@ -110,13 +80,12 @@ class Pixhawk:
 
         # establish publishers for sensor data, and thruster controls
         rc = OverrideRCIn()
-        self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
+        self.override_pub = rospy.Publisher("mavros/rc/override", OverrideRCIn, queue_size=10)
         self.depth_pose_pub = rospy.Publisher("wolf_serial/depth_pose", PoseWithCovarianceStamped, queue_size=10)
 
         # subscribe to our target movement values as well as our raw sensor data
         rospy.Subscriber("cmd_vel", Twist, self.vel_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
-        rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
 
         # establish coordinate frame and its broadcaster
         self.coordinate_frame_broadcaster = tf2_ros.TransformBroadcaster()
