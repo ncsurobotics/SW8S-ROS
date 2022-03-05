@@ -5,7 +5,7 @@
     <include file="$(find wolf_control)/launch/ekf_node.launch"/>
     
     <node name="depth_pid" pkg="pid" type="controller" >
-        <param name="Kp" value="1.3" />
+        <param name="Kp" value="0.5" />
         <param name="Ki" value="0.0" />
         <param name="Kd" value="0.0" />
         <param name="upper_limit" value="1.0" />
@@ -20,7 +20,7 @@
 
     </node>
     <node name="yaw_pid" pkg="pid" type="controller" >
-        <param name="Kp" value="-0.6" />
+        <param name="Kp" value="-0.3" />
         <param name="Ki" value="0.0" />
         <param name="Kd" value="0.0" />
         <param name="upper_limit" value="1.0" />
@@ -32,6 +32,7 @@
         <param name="topic_from_plant" value="wolf_control/yaw_state" />
         <param name="setpoint_topic" value="wolf_control/yaw_setpoint" />
         <param name="angle_error" value="true" />
+        <param name="angle_wrap" value="12.5663" />
         <param name="setpoint_timeout" value="-1" />
 
     </node>

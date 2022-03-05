@@ -4,10 +4,11 @@ import rospy
 import mavros
 import tf2_ros
 import tf_conversions
-from geometry_msgs.msg import TransformStamped, Twist
+from geometry_msgs.msg import TransformStamped, Twist, PoseWithCovarianceStamped
 from std_msgs.msg import Float64
 from mavros_msgs.msg import OverrideRCIn
 from sensor_msgs.msg import Imu
+from nav_msgs.msg import Odometry
 
 # takes a value and remaps it from one range into another
 def value_map(value, istart, istop, ostart, ostop):
@@ -55,6 +56,20 @@ class Pixhawk:
         self.delta_time = rospy.get_time() - self.initial_time
         self.initial_time = rospy.get_time()
 
+        depth_pose = PoseWithCovarianceStamped()
+        depth_pose.header.stamp = rospy.Time.now()
+        depth_pose.header.frame_id = "odom"
+        depth_pose.pose.pose.position.z = data.data
+        identity = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+        depth_pose.pose.covariance = [i * 0.05 for i in identity]
+        self.depth_pose_pub.publish(depth_pose)
+
+
     # read the raw orientation sensor data and publish it to the rest of our nodes
     # (THIS NEEDS TO BE CHANGED, CURRENTLY USES MAGNETIC SENSOR AND NOT IMU BECAUSE OF BROKEN SIMULATOR)
     def imu_callback(self, data: Imu):
@@ -96,15 +111,16 @@ class Pixhawk:
         # establish publishers for sensor data, and thruster controls
         rc = OverrideRCIn()
         self.override_pub = rospy.Publisher(mavros.get_topic("rc", "override"), OverrideRCIn, queue_size=10)
+        self.depth_pose_pub = rospy.Publisher("wolf_serial/depth_pose", PoseWithCovarianceStamped, queue_size=10)
 
         # subscribe to our target movement values as well as our raw sensor data
         rospy.Subscriber("cmd_vel", Twist, self.vel_callback)
         rospy.Subscriber("mavros/global_position/rel_alt", Float64, self.depth_callback)
-        rospy.Subscriber("/odometry/filtered", Odometry, self.imu_callback)
+        rospy.Subscriber("mavros/imu/data", Imu, self.imu_callback)
 
         # establish coordinate frame and its broadcaster
         self.coordinate_frame_broadcaster = tf2_ros.TransformBroadcaster()
-        self.update_transform()
+#        self.update_transform()
 
         while not rospy.is_shutdown():
             # tells the thrusters to move to target rates, this is where movement actually occurs
@@ -127,7 +143,7 @@ class Pixhawk:
                 rospy.logerr("WATCHDOG TIMER TRIGGERED: SENSOR DATA IS TOO SLOW")
 '''
             self.override_pub.publish(rc)
-            self.update_transform()
+#            self.update_transform()
             rate.sleep()
 
 
