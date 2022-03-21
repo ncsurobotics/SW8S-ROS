@@ -3,5 +3,5 @@
     <rosparam param="ROS_IP">10.211.55.3</rosparam>>
     <include file="$(find wolf_control)/launch/wolf_control.launch" pass_all_args="true"/>
     <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py"/>
-    <node name="detector" pkg="wolf_vision" type="gate_detect.py"/>
+    <node name="detector" pkg="wolf_vision" type="gate_process.py"/>
 </launch>
