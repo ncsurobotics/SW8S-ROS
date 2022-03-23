@@ -89,7 +89,7 @@ class gate_detector:
         check_index = np.flip(sort_index[-22:])      # filter the sorted pixel index array
         
         max_filter = 7500
-        center = -1
+        center = 0
         saved_i = check_index[0]
 
         if max(total_energy) < max_filter:
@@ -125,10 +125,8 @@ class gate_detector:
             # the height location is not reliable
         gate_location = (self.findByMaximum(mask1_img,0),
                         self.findByMaximum(mask1_img,1))
-        if any(gate_location) < 0:
-            valid_location = False
-        else:
-            valid_location = True
+        valid_location = any(gate_location)
+
             # image center
         vert_center = int(mask1_img.shape[1] / 2)
         hori_center = int(mask1_img.shape[0] / 2)
@@ -137,12 +135,12 @@ class gate_detector:
             # blue circle: image center
             # green circle: gate location
             # red circle: x: gate location, y: image center
-        if valid_location:
+        if valid_location and all(gate_location):
             #################################
             # send the location to robot here
             #################################
 
-            targetoffset = (gate_location[0] - vert_center,0)
+            targetoffset = (gate_location[0] - vert_center,1)
 
             if self.show_window:
                 cv2.circle(mask1_img,gate_location,5,(0,255,0))
