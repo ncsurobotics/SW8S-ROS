@@ -1,7 +1,7 @@
 <launch>
     <node name="tcpserver" pkg="ros_tcp_endpoint" type="default_server_endpoint.py"/>
-    <rosparam param="ROS_IP">10.211.55.3</rosparam>>
+    <rosparam param="ROS_IP">192.168.86.27</rosparam>>
     <include file="$(find wolf_control)/launch/wolf_control.launch" pass_all_args="true"/>
     <node name="pixhawk" pkg="wolf_serial" type="pixhawk.py"/>
-    <node name="detector" pkg="wolf_vision" type="gate_process.py"/>
+    <node name="detector" pkg="wolf_vision" type="yolo_gate.py"/>
 </launch>
