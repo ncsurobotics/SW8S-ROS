@@ -4,6 +4,7 @@ import rospkg
 import cv2
 import math
 import numpy as np
+from functools import cmp_to_key
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from std_msgs.msg import String, Float64
@@ -66,13 +67,22 @@ class gate_detector:
                 confidence = scores[classID]
                 #ensure that the confidence is past our minimum
                 #and is more than any other detected in this frame
-                if confidence > self.confidence_threshold and confidence > self.gates[classID][2]:
+                if confidence > self.confidence_threshold and confidence > self.gates[0][2]:
                     box = detection[:4] * np.array([width, height, width, height])
                     (centerX, centerY, bw, bh) = box.astype("int")
-                    x = int(centerX - (bw / 2))
-                    y = int(centerY - (bh / 2))
-                    self.gates[classID] = (x, y, confidence)
+                    x = centerX
+                    y = centerY
+                    self.gates[0] = (x, y, confidence)
+                elif confidence > self.confidence_threshold and confidence > self.gates[1][2]:
+                    box = detection[:4] * np.array([width, height, width, height])
+                    (centerX, centerY, bw, bh) = box.astype("int")
+                    x = centerX
+                    y = centerY
+                    self.gates[1] = (x, y, confidence)
         
+        #sort gates found by their position on the x axis
+        self.gates = sorted(self.gates, key = cmp_to_key(lambda a,b: a[0] - b[0]))
+
         #make a TF2 frame for the gate
         if self.gates[0][2] > 0:
             # offset from the center of image
@@ -101,7 +111,7 @@ class gate_detector:
             gate_transform = TransformStamped()
             gate_transform.header.stamp = rospy.Time.now()
             gate_transform.header.frame_id = "base_link"
-            gate_transform.child_frame_id = "lgate"
+            gate_transform.child_frame_id = "left_gate"
             gate_transform.transform.translation.x = math.cos(angle_to_gate[0])
             gate_transform.transform.translation.y = math.sin(angle_to_gate[0])
             gate_transform.transform.translation.z = 0.0

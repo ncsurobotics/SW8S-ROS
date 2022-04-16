@@ -1,6 +1,6 @@
 <launch>
   <include file="$(find wolf_bringup)/launch/simulate_seawolf8.launch"/>
-  <node name="mission" pkg="wolf_control" type="mission.py"
+  <node name="mission" pkg="wolf_control" type="mission_yolo.py"
         launch-prefix="bash -c 'sleep 5; $0 $@' "/>
 </launch>
 
