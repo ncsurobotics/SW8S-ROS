@@ -138,16 +138,17 @@ def mission():
                 # record our current heading in case next data point isnt stable
                 last_world_gate = world_gate_vector
                 last_base_gate = base_gate_vector
-
-                angle_to_gate = math.atan2(base_gate_vector.transform.translation.y, base_gate_vector.transform.translation.x)
-                goal = Twist()
-                goal.linear.x = world_gate_vector.transform.translation.x
-                goal.linear.y = world_gate_vector.transform.translation.y
-                goal.linear.z = submerge_depth
-                if should_turn and good_gate_count > queue_depth and len(right_gate_queue) > queue_depth:
-                    goal.angular.z = odom.transform.rotation.z + np.mean(right_angle_queue)
-                    pass
-                goal_pub.publish(goal)
+                
+                if base_gate_vector is not None and world_gate_vector is not None:
+                    angle_to_gate = math.atan2(base_gate_vector.transform.translation.y, base_gate_vector.transform.translation.x)
+                    goal = Twist()
+                    goal.linear.x = world_gate_vector.transform.translation.x
+                    goal.linear.y = world_gate_vector.transform.translation.y
+                    goal.linear.z = submerge_depth
+                    if should_turn and good_gate_count > queue_depth and len(right_gate_queue) > queue_depth:
+                        goal.angular.z = odom.transform.rotation.z + np.mean(right_angle_queue)
+                        pass
+                    goal_pub.publish(goal)
                 if no_gate_count > 5:
                     rospy.logwarn("missed too many, dead reckoning")
                     saved_goal = goal
