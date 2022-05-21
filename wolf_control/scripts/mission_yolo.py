@@ -16,6 +16,7 @@ class mission_states(Enum):
 def checkTolerance(current, wanted):
     tolerance = 0.3
     return (current < (wanted + tolerance)) and (current > (wanted - tolerance))
+
         
 def mission():
     rospy.init_node('mission_controller', anonymous=True)
