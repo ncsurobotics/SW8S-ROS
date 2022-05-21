@@ -14,8 +14,9 @@ class mission_states(Enum):
     MOVE_THROUGH_GATE = 2
 
 def checkTolerance(current, wanted):
-    tolerance = 0.1
-    return current < wanted + tolerance and current > wanted - tolerance
+    tolerance = 0.3
+    return (current < (wanted + tolerance)) and (current > (wanted - tolerance))
+
         
 def mission():
     rospy.init_node('mission_controller', anonymous=True)
@@ -33,10 +34,10 @@ def mission():
     left_gate_queue = []
 
     #hyper params
-    submerge_depth = -1
-    dead_reckon_duration = 40
+    submerge_depth = -2.35
+    dead_reckon_duration = 100
     queue_depth = 10
-    sigma_tolerance = 4
+    sigma_tolerance = 5
     should_turn = False
     should_discard_stale = True
 
@@ -55,9 +56,9 @@ def mission():
             if state == mission_states.SUBMERGE:
                 goal = Twist()
                 goal.linear.z = submerge_depth
-                goal.angular.z = odom.transform.rotation.z
+                goal.angular.z = 3.1415 + odom.transform.rotation.z
                 goal_pub.publish(goal)
-                if checkTolerance(odom.transform.translation.z, submerge_depth):
+                if (abs(odom.transform.translation.z - submerge_depth)) < 0.3:
                     state = mission_states.MOVE_TO_GATE  
                     timer = 0
                     saved_goal = None        
@@ -104,8 +105,8 @@ def mission():
                     pass
                 #left gate is too flakey, none of this is used right now
                 try:
-                    world_left_gate = tf_buffer.lookup_transform("odom", "lgate", rospy.Time(0))
-                    base_left_gate = tf_buffer.lookup_transform("base_link", "lgate", rospy.Time(0))
+                    world_left_gate = tf_buffer.lookup_transform("odom", "left_gate", rospy.Time(0))
+                    base_left_gate = tf_buffer.lookup_transform("base_link", "left_gate", rospy.Time(0))
                     #maintain a queue of the last 5 gate transforms
                     if len(left_gate_queue) > queue_depth:
                         stddev = np.std(left_gate_queue)
@@ -146,10 +147,10 @@ def mission():
                     goal.linear.y = world_gate_vector.transform.translation.y
                     goal.linear.z = submerge_depth
                     if should_turn and good_gate_count > queue_depth and len(right_gate_queue) > queue_depth:
-                        goal.angular.z = odom.transform.rotation.z + np.mean(right_angle_queue)
+                        goal.angular.z = odom.transform.rotation.z + np.mean(right_angle_queue) + 3.1415
                         pass
                     goal_pub.publish(goal)
-                if no_gate_count > 5:
+                if no_gate_count > 6:
                     rospy.logwarn("missed too many, dead reckoning")
                     saved_goal = goal
                     state = mission_states.MOVE_THROUGH_GATE
