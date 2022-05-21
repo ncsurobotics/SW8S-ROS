@@ -5,12 +5,13 @@ from curses import wrapper
 import curses
 import curses.panel
 from sensor_msgs.msg import BatteryState
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 
 class Monitor:
     voltage = 16.4
     simulated = True
     set_pose = False
+    is_kill = True
     rcrates = Twist()
     goal = Twist()
     state = "MISSION DISABLED"
@@ -38,6 +39,7 @@ class Monitor:
         rospy.Subscriber("wolf_control/goal", Twist, self.goal_callback)
         rospy.Subscriber("wolf_control/mission_state", String, self.state_callback)
         goal_pub = rospy.Publisher('wolf_control/goal', Twist, queue_size=10)
+        kill_pub = rospy.Publisher('killswitch', Bool, queue_size=1)
 
         stdscr.clear()
         stdscr.nodelay(1)
@@ -45,6 +47,7 @@ class Monitor:
             stdscr.erase()
             stdscr.addstr(0, 0, 'Battery Voltage: {:.3}V'.format(self.voltage))
             stdscr.addstr(2, 0, 'Mission State:   {}'.format(self.state))
+            stdscr.addstr(4, 0, 'Armed:           {}'.format(self.state))
             stdscr.addstr(0, 35, 'Current RC Rates:      Linear {:.3}, {:.3}, {:.3}; Angular: {:.3}, {:.3}, {:.3}'
                         .format(self.rcrates.linear.x, self.rcrates.linear.y, self.rcrates.linear.z, self.rcrates.angular.x, self.rcrates.angular.y, self.rcrates.angular.z))
             stdscr.addstr(2, 35, 'Current Position Goal: Linear {:.3}, {:.3}, {:.3}; Angular: {:.3}, {:.3}, {:.3}'
@@ -57,11 +60,19 @@ class Monitor:
                 break
             if c == ord('s'):
                 self.set_pose = not self.set_pose
+            if c == ord('k'):
+                kill_pub.publish(Bool(False))
+                self.is_kill = False
+            if c == ord('a'):
+                kill_pub.publish(Bool(True))
+                self.is_kill = True
 
             #draw instructions on how to use the program
             if not self.set_pose:
                 stdscr.addstr(5, 30, 'Press "s" to publish a message to wolf_control/goal')
-                stdscr.addstr(6, 30, 'Press "q" to quit this program')
+                stdscr.addstr(6, 30, 'Press "k" to kill the robot')
+                stdscr.addstr(7, 30, 'Press "a" to arm the robot')
+                stdscr.addstr(8, 30, 'Press "q" to quit this program')
             stdscr.refresh()
             
             #draw boxes if applicable

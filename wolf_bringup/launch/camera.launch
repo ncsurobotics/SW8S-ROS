@@ -1,0 +1,4 @@
+<launch>
+  <arg name="fcu_url" default="/dev/ttyACM0" />
+  <node name="camera_forwarder" pkg="wolf_vision" type="camera_forwarder.py"/>
+</launch>
