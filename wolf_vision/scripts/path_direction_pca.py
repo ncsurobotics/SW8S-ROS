@@ -1,5 +1,5 @@
+#!/usr/bin/env python
 import rospy
-
 import cv2
 import numpy as np
 from sensor_msgs.msg import Image
@@ -149,40 +149,49 @@ class path_direction:
         if self.show_window:
             cv2.imshow('mask1_path',bottom_path)
             cv2.imshow('mask2_path',top_path)
-        
+
         # Compute Principle Components for both path segments (center point(mean), direction vector(eigvec), variance vector(eigval))
         path_center1, path_direction1, pca_val1 = self.Path_PCA(bottom_path)
         path_center2, path_direction2, pca_val2 = self.Path_PCA(top_path)
+        
         # select highest variance for each(eigenvalue)
-        bot_dir = path_direction1[:,np.argmax(pca_val1)]
-        top_dir = path_direction2[:,np.argmax(pca_val2)]
+        #bot_dir = path_direction1[:,np.argmax(pca_val1)]
+        #top_dir = path_direction2[:,np.argmax(pca_val2)]
+        
+        # find angle of bottom direction and top direction with respect to up
+        # bot_angle and top_angle aren't necessary for straight paths, but useful if the top and bottom point to different directions
+        #bot_angle = self.compute_angle(self.FORWARD_DEFAULT, bot_dir)
+        #top_angle = self.compute_angle(self.FORWARD_DEFAULT, top_dir)
+        
         # center of two segments (start location)
         bot_hori_cent, bot_vert_cent = int(path_center1[:,0][0]), int(path_center1[:,0][1])
         top_hori_cent, top_vert_cent = int(path_center2[:,0][0]), int(path_center2[:,0][1])
+
+        
+        
         # compute end location of two segment directions
         path_direction = self.compute_slope((bot_hori_cent, bot_vert_cent),(top_hori_cent, top_vert_cent))
-        # find angle of bottom direction and top direction with respect to up
-        # bot_angle and top_angle aren't necessary for straight paths
-        bot_angle = self.compute_angle(self.FORWARD_DEFAULT, bot_dir)
-        top_angle = self.compute_angle(self.FORWARD_DEFAULT, top_dir)
         path_angle = self.compute_angle(self.FORWARD_DEFAULT,path_direction)
 
         if self.property_pub:
-            #    [path_color, background_color, theta, size, bot_location, top_location]
+            # these information might be useful for more complex logic as well
+            # [path_color, background_color, theta, size, bot_location, top_location]
             current_path_properties = [path_color, background_color, path_angle, path_size/img_size, bot_hori_cent, bot_vert_cent, top_hori_cent, top_vert_cent]
             self.property_pub.publish(str(current_path_properties))
 
-        # information on display
         if self.show_window:
             cv2.arrowedLine(frame,(bot_hori_cent, bot_vert_cent),(top_hori_cent, top_vert_cent),
                             color=(255,255,255),thickness=2,tipLength=0.2)
         
         ####
-        #   determine movement
+        #   determine movement of the robot
+        #
+        #   needs more logic and testing in simulation
         ####
 
+        # path found
         if abs(gray_colors[0].astype(int) - gray_colors[1].astype(int)) > self.BACKGROUND_THRES:
-            # path found
+            
             turn_direction = top_hori_cent - bot_hori_cent
 
             path_transform = TransformStamped()
@@ -190,6 +199,7 @@ class path_direction:
             path_transform.header.frame_id = "base_link"
             path_transform.child_frame_id = "path"
             # distance between top path and center, and normalized between [-0.25, 0.25]
+            # did NOT consider when the top part of path goes below the image center
             path_transform.transform.translation.x = (top_vert_cent - height/2) / (2 * height)
             path_transform.transform.translation.y = (top_hori_cent - width/2) / (2 * width)
             path_transform.transform.translation.z = 0.0
@@ -223,8 +233,8 @@ class path_direction:
                     cv2.putText(frame, "rotate left(turn mag): {theta}".format(theta = path_angle),
                                 (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
                 cv2.imshow('final', frame)
+        # no path found
         else:
-            # no path found
             if self.show_window:
                 cv2.putText(frame, "no path", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,0,255))
                 cv2.imshow('final', frame)
