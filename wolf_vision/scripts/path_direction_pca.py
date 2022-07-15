@@ -180,57 +180,51 @@ class path_direction:
         ####
         #   determine movement
         ####
-        path_transform = TransformStamped()
-        path_transform.header.stamp = rospy.Time.now()
-        path_transform.header.frame_id = "base_link"
-        path_transform.child_frame_id = "path"
-        path_transform.transform.translation.x = 0.0
-        path_transform.transform.translation.y = 0.0
-        path_transform.transform.translation.z = 0.0
-        path_transform.transform.rotation.x = 0
-        path_transform.transform.rotation.y = 0
-        path_transform.transform.rotation.z = 0
-        path_transform.transform.rotation.w = 1
 
-        if abs(gray_colors[0].astype(int) - gray_colors[1].astype(int)) < self.BACKGROUND_THRES:
-            # no path found
+        if abs(gray_colors[0].astype(int) - gray_colors[1].astype(int)) > self.BACKGROUND_THRES:
+            # path found
+            turn_direction = top_hori_cent - bot_hori_cent
+
+            path_transform = TransformStamped()
+            path_transform.header.stamp = rospy.Time.now()
+            path_transform.header.frame_id = "base_link"
+            path_transform.child_frame_id = "path"
+            # distance between top path and center, and normalized between [-0.25, 0.25]
+            path_transform.transform.translation.x = (top_vert_cent - height/2) / (2 * height)
+            path_transform.transform.translation.y = (top_hori_cent - width/2) / (2 * width)
+            path_transform.transform.translation.z = 0.0
+            path_transform.transform.rotation.x = 0
+            path_transform.transform.rotation.y = 0
+            # set the rotation in radians, should be between [0, pi/2]
+            if (turn_direction > 0):
+                # turn right with respect to z axis (?)
+                path_transform.transform.rotation.z = path_angle
+            else:
+                #turn left
+                path_transform.transform.rotation.z = -path_angle
+            path_transform.transform.rotation.w = 1
+            
             tf2_ros.TransformBroadcaster().sendTransform(path_transform)
+
+            if self.show_window:
+                cv2.putText(frame, "found path", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,255,0))
+
+                if (top_hori_cent < width/2):        
+                    cv2.putText(frame, "move left (x pos): {loc}".format(loc = top_hori_cent),
+                                (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
+                else:
+                    cv2.putText(frame, "move right(x pos): {loc}".format(loc = top_hori_cent),
+                                (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
+
+                if (turn_direction > 0):
+                    cv2.putText(frame, "rotate right(turn mag): {theta}".format(theta = path_angle),
+                                (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
+                else:
+                    cv2.putText(frame, "rotate left(turn mag): {theta}".format(theta = path_angle),
+                                (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
+                cv2.imshow('final', frame)
+        else:
+            # no path found
             if self.show_window:
                 cv2.putText(frame, "no path", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,0,255))
                 cv2.imshow('final', frame)
-            return # return to not send another transform
-        else:
-            if self.show_window:
-                cv2.putText(frame, "found path", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,255,0))
-        
-        # track top x, translate to top part of the path
-        # distance to center and normalized between [-0.25, 0.25]
-        path_transform.transform.translation.x = (top_vert_cent - height/2) / (2 * height)
-        path_transform.transform.translation.y = (top_hori_cent - width/2) / (2 * width)
-
-        if self.show_window:
-            if (top_hori_cent < width/2):        
-                cv2.putText(frame, "move left (x pos): {loc}".format(loc = top_hori_cent),
-                            (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
-            else:
-                cv2.putText(frame, "move right(x pos): {loc}".format(loc = top_hori_cent),
-                            (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
-        # top x - bottom x
-        turn_direction = top_hori_cent - bot_hori_cent
-        if (turn_direction > 0):
-            # turn right with respect to z axis (?)
-            # set the rotation in radians, should be [0, pi/2]
-            path_transform.transform.rotation.z = path_angle
-            if self.show_window:
-                cv2.putText(frame, "rotate right(turn mag): {theta}".format(theta = path_angle),
-                            (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
-        else:
-            # turn left
-            path_transform.transform.rotation.z = -path_angle
-            if self.show_window:
-                cv2.putText(frame, "rotate left(turn mag): {theta}".format(theta = path_angle),
-                            (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
-
-        tf2_ros.TransformBroadcaster().sendTransform(path_transform)
-        if self.show_window:
-            cv2.imshow('final', frame)
