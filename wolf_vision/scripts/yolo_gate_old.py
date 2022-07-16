@@ -13,12 +13,14 @@ import tf2_ros
 class gate_detector:
     focal_length = 381.36115
     classes = []
-    is_debug = False
+    is_debug = True
     confidence_threshold = 0.2
     gates = [(0,0,0),(0,0,0)] #(right_gate, left_gate) where gate = (x,y,confidence)
+    gframe = None
 
     def __init__(self):
         self.image_sub = rospy.Subscriber("wolf_camera1/image_raw", Image, self.frame_callback)
+        self.image_pub = rospy.Publisher("wolf_camera1/gate", Image, queue_size=1)
         self.bridge = CvBridge()
 
         #load the YOLO model
@@ -28,19 +30,25 @@ class gate_detector:
         self.classes = open(root_path + "/models/gate.names").read().strip().split('\n')
         self.net = cv2.dnn.readNetFromDarknet(root_path + "/models/yolov4-tiny-gate.cfg", 
                                         root_path + "/models/yolov4-tiny-gate_1000.weights")
-        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_DEFAULT)
-        #self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        #self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_DEFAULT)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL_FP16)
+        rate = rospy.Rate(20)
+        while not rospy.is_shutdown():
+            if self.gframe is not None:
+                self.frame_loop(self.gframe)
+            rate.sleep()
 
     def offset(self, origin, target):
         x = target[0] - origin[0]
         y = origin[1] - target[1]
         return [x,y]
-
+    
     def frame_callback(self, data: Image):
         #convert to an openCV image
-        frame = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        self.gframe = self.bridge.imgmsg_to_cv2(data, "bgr8")
+
+    def frame_loop(self, frame): 
         height, width, _ = frame.shape
-        
         #reset gate data
         self.gates = [(0,0,0),(0,0,0)]
         #convert openCV image to blob (CNN input)
@@ -71,7 +79,9 @@ class gate_detector:
                     box = detection[:4] * np.array([width, height, width, height])
                     (centerX, centerY, bw, bh) = box.astype("int")
                     x = int(centerX - (bw / 2))
-                    y = int(centerY - (bh / 2))
+                    y = int(centerY - (bh / 2)) + 20
+                    x = centerX
+                    y = centerY
                     self.gates[classID] = (x, y, confidence)
         
         #make a TF2 frame for the gate
@@ -85,8 +95,8 @@ class gate_detector:
             gate_transform.header.stamp = rospy.Time.now()
             gate_transform.header.frame_id = "base_link"
             gate_transform.child_frame_id = "gate"
-            gate_transform.transform.translation.x = math.cos(angle_to_gate[0])
-            gate_transform.transform.translation.y = math.sin(angle_to_gate[0])
+            gate_transform.transform.translation.x = -math.cos(angle_to_gate[0])
+            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0])
             gate_transform.transform.translation.z = 0.0
             gate_transform.transform.rotation.x = 0
             gate_transform.transform.rotation.y = 0
@@ -103,8 +113,8 @@ class gate_detector:
             gate_transform.header.stamp = rospy.Time.now()
             gate_transform.header.frame_id = "base_link"
             gate_transform.child_frame_id = "lgate"
-            gate_transform.transform.translation.x = math.cos(angle_to_gate[0])
-            gate_transform.transform.translation.y = math.sin(angle_to_gate[0])
+            gate_transform.transform.translation.x = -math.cos(angle_to_gate[0])
+            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0])
             gate_transform.transform.translation.z = 0.0
             gate_transform.transform.rotation.x = 0
             gate_transform.transform.rotation.y = 0
@@ -115,8 +125,9 @@ class gate_detector:
         if self.is_debug:
             cv2.circle(frame, (self.gates[0][0], self.gates[0][1]), radius=15, color=(0,0,255), thickness=2)
             cv2.circle(frame, (self.gates[1][0], self.gates[1][1]), radius=15, color=(0,0,255), thickness=2)
-            cv2.imshow("gate", frame)
-            cv2.waitKey(2)
+            self.image_pub.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
+            #cv2.imshow("gate", frame)
+            #cv2.waitKey(2)
 
 
 if __name__ == '__main__':

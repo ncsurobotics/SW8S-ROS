@@ -4,6 +4,7 @@ import rospy
 import mavros
 import tf2_ros
 import tf_conversions
+import time
 from geometry_msgs.msg import TransformStamped, Twist, PoseWithCovarianceStamped
 from std_msgs.msg import Float64, Bool
 from mavros_msgs.msg import OverrideRCIn
@@ -76,9 +77,9 @@ class Pixhawk:
     
     def killswitch_callback(self, data: Bool):
         if self.armed != data.data:
-            rospy.logerr(data.data)
+            rospy.logwarn("PIXHAWK ARMING")
             self.armed = data.data
-            #self.set_mode(0, 'ALT_HOLD')
+            time.sleep(2)
             self.arm(data.data)
         
 
@@ -86,6 +87,7 @@ class Pixhawk:
         if self.arm_service is not None: 
             result = self.arm_service(should_arm)
             if result.success == False:
+                rospy.logerr("failed to arm")
                 self.arm(should_arm)
     
     def set_mode(self, base_mode: int, custom_mode: str):
@@ -106,8 +108,8 @@ class Pixhawk:
         self.arm_service = rospy.ServiceProxy("mavros/cmd/arming", CommandBool)
         self.mode_service = rospy.ServiceProxy("mavros/set_mode", SetMode)
          
-        self.set_mode(0, 'ALT_HOLD')
-        self.arm(True)
+        #self.set_mode(0, 'ALT_HOLD')
+        #self.arm(True)
         
         # time setup
         self.initial_time = rospy.get_time()
@@ -127,28 +129,15 @@ class Pixhawk:
 #        self.update_transform()
 
         while not rospy.is_shutdown():
-            if self.armed:
-                # tells the thrusters to move to target rates, this is where movement actually occurs
-                rc.channels[0] = int(self.pitch_rate)
-                rc.channels[1] = int(self.roll_rate)
-                rc.channels[2] = int(self.vertical_rate)
-                rc.channels[3] = int(self.yaw_rate)
-                rc.channels[4] = int(self.forward_rate)
-                rc.channels[5] = int(self.strafe_rate)
+            # tells the thrusters to move to target rates, this is where movement actually occurs
+            rc.channels[0] = int(self.pitch_rate)
+            rc.channels[1] = int(self.roll_rate)
+            rc.channels[2] = int(self.vertical_rate)
+            rc.channels[3] = int(self.yaw_rate)
+            rc.channels[4] = int(self.forward_rate)
+            rc.channels[5] = int(self.strafe_rate)
 
-                '''
-                # if no data is coming in, kill thrusters
-                if self.delta_time > 0.1:
-                    rc.channels[0] = 1500
-                    rc.channels[1] = 1500
-                    rc.channels[2] = 1500
-                    rc.channels[3] = 1500
-                    rc.channels[4] = 1500
-                    rc.channels[5] = 1500
-                    rospy.logerr("WATCHDOG TIMER TRIGGERED: SENSOR DATA IS TOO SLOW")
-    '''
-                self.override_pub.publish(rc)
-#            self.update_transform()
+            self.override_pub.publish(rc)
             rate.sleep()
 
 

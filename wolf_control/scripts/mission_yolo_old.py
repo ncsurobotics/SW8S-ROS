@@ -9,7 +9,7 @@ import numpy as np
 
 
 class mission_states(Enum):
-    WAIT_FOR_ARM = -2 
+    WAIT_FOR_ARM = -2
     STOP = -1
     SUBMERGE = 0
     MOVE_TO_GATE = 1
@@ -48,19 +48,15 @@ def mission():
     left_gate_queue = []
 
     #hyper params
-    submerge_depth = -2.45
-    dead_reckon_duration = 30
-    queue_depth = 4
+    submerge_depth = -1.90
+    dead_reckon_duration = 100
+    queue_depth = 10
     sigma_tolerance = 5
     should_turn = True
     should_discard_stale = True
 
     last_world_gate = None
     last_base_gate = None
-    no_left_count = 0
-    no_right_count = 0
-    left_count = 0
-    right_count = 0
     no_gate_count = 0
     good_gate_count = 0 
 
@@ -78,12 +74,11 @@ def mission():
                     rospy.logerr("counting")
                 if timer > 4:
                     state = mission_states.SUBMERGE
-                    saved_goal = odom
                     timer = 0
             elif state == mission_states.SUBMERGE:
                 goal = Twist()
                 goal.linear.z = submerge_depth
-                goal.angular.z = 3.1415 + saved_goal.transform.rotation.z
+                goal.angular.z = 3.1415 + odom.transform.rotation.z
                 goal_pub.publish(goal)
                 if (abs(odom.transform.translation.z - submerge_depth)) < 0.3:
                     state = mission_states.MOVE_TO_GATE  
@@ -104,45 +99,82 @@ def mission():
                 try:
                     world_right_gate = tf_buffer.lookup_transform("odom", "gate", rospy.Time(0))
                     base_right_gate = tf_buffer.lookup_transform("base_link", "gate", rospy.Time(0))
+                    time_since_frame = abs(world_right_gate.header.stamp - rospy.Time.now())
+                    #maintain a queue of the last 5 gate transforms
+                    if len(right_gate_queue) > queue_depth:
+                        stddev = np.std(right_gate_queue)
+                        avg = np.mean(right_gate_queue)
+                        lower = avg - (stddev * sigma_tolerance)
+                        upper = avg + (stddev * sigma_tolerance)
+                        right_gate_queue.pop(0) # pop something off the queue to make room for the next datapoint
+                        right_angle_queue.pop(0)
+
+                        # if we're within the normal data range this is a stable point
+                        if world_right_gate.transform.translation.x < upper and world_right_gate.transform.translation.x > lower:
+                            right_stable = True
+                    else:
+                        right_stable = True
+
+                    right_gate_queue.append(world_right_gate.transform.translation.x)
+                    angle_to_gate = math.atan2(base_right_gate.transform.translation.y, base_right_gate.transform.translation.x)
+                    right_angle_queue.append(angle_to_gate)
+
+                    #stale frames don't count
+                    if should_discard_stale and time_since_frame.secs > 2:
+                        right_stable = False
+
                 except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
-                    rospy.logerr("no right gate")
+                    rospy.logerr("misson code: FUCK")
+                #left gate is too flakey, none of this is used right now
                 try:
                     world_left_gate = tf_buffer.lookup_transform("odom", "left_gate", rospy.Time(0))
                     base_left_gate = tf_buffer.lookup_transform("base_link", "left_gate", rospy.Time(0))
+                    #maintain a queue of the last 5 gate transforms
+                    if len(left_gate_queue) > queue_depth:
+                        stddev = np.std(left_gate_queue)
+                        avg = np.mean(left_gate_queue)
+                        lower = avg - (stddev * sigma_tolerance)
+                        upper = avg + (stddev * sigma_tolerance)
+                        left_gate_queue.pop(0) # pop something off the queue to make room for the next datapoint
+
+                        # if we're within the normal data range this is a stable point
+                        if world_left_gate.transform.translation.x < upper and world_left_gate.transform.translation.x > lower:
+                            left_stable = True
+                    else:
+                        left_stable = True
+
+                    left_gate_queue.append(world_left_gate.transform.translation.x)
                 except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
-                    rospy.logerr("no left gate")
+                    rospy.logerr("misson code: FUCK")
                 
                 # move towards the stable point
-                if world_right_gate is not None:
-                    if no_left_count > 5:
-                        world_gate_vector = world_right_gate
-                        base_gate_vector = base_right_gate
-                    no_right_count = 0
-                    right_count += 1
-                else:
-                    no_right_count += 1
-                if world_left_gate is not None:
-                    world_gate_vector = world_left_gate
-                    base_gate_vector = base_left_gate
-                    no_left_count = 0
-                    left_count += 1
-                else:
-                    no_left_count += 1
+                if right_stable:
+                    world_gate_vector = world_right_gate
+                    base_gate_vector = base_right_gate
+                    no_gate_count = 0
+                    good_gate_count += 1
+                elif len(right_gate_queue) > queue_depth:
+                    good_gate_count = 0
+                    no_gate_count += 1
+                    rospy.logwarn("missed one")
 
+                # record our current heading in case next data point isnt stable
+                last_world_gate = world_gate_vector
+                last_base_gate = base_gate_vector
+                
                 if base_gate_vector is not None and world_gate_vector is not None:
                     angle_to_gate = math.atan2(base_gate_vector.transform.translation.y, base_gate_vector.transform.translation.x)
-                    rospy.logerr("should be good")
                     goal = Twist()
                     goal.linear.x = world_gate_vector.transform.translation.x
                     goal.linear.y = world_gate_vector.transform.translation.y
                     goal.linear.z = submerge_depth
-                    if should_turn:
-                        goal.angular.z = odom.transform.rotation.z + angle_to_gate + 3.1415
+                    if should_turn and good_gate_count > queue_depth and len(right_gate_queue) > queue_depth:
+                        goal.angular.z = odom.transform.rotation.z + -np.mean(right_angle_queue) + 3.1415
                         pass
-                    saved_goal = goal
                     goal_pub.publish(goal)
-                if no_left_count > 3 and no_right_count > 3:
+                if no_gate_count > 6:
                     rospy.logwarn("missed too many, dead reckoning")
+                    saved_goal = goal
                     state = mission_states.MOVE_THROUGH_GATE
                     timer = 0
             elif state == mission_states.MOVE_THROUGH_GATE:

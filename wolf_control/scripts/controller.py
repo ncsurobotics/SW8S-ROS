@@ -80,17 +80,20 @@ class Controller:
     twist_state = Twist()
     max_lateral_speed = 0.4
     world_goal = None
-    armed = True
+    armed = False
 
     delta_time = 0.0
     initial_time = 0.0
 
     yaw_setpoint = 0.0
     depth_setpoint = 0.0
+    
+    max_lat_speed = 0.15
+    max_vert_speed = -0.4
 
     def armed_callback(self, data: Bool):
         if self.armed != data.data:
-            rospy.logerr(data.data)
+            time.sleep(2)
             self.armed = data.data
         
     def goal_callback(self, twist: Twist):
@@ -112,7 +115,7 @@ class Controller:
         self.yawin_pub = rospy.Publisher("yaw_state", Float64, queue_size=10)
 
 
-        depthPID = PIDController(0.45, 0.0, 0.0)
+        depthPID = PIDController(0.37, 0.0, 0.0)
         yawPID = PIDController(-0.04, 0.0, 0.0, True)
 
         tf_buffer = tf2_ros.Buffer()
@@ -148,14 +151,14 @@ class Controller:
 
                 #set thrusters to move according to movement controllers
                 cmd_vel = Twist()
-                cmd_vel.linear.z = depth_control_out
+                cmd_vel.linear.z = max(depth_control_out, self.max_vert_speed)
                 cmd_vel.angular.z = yaw_control_out
                 
                 if self.world_goal:
                     try:
                         hull_goal = tf_buffer.transform(self.world_goal, 'base_link')
-                        cmd_vel.linear.x = hull_goal.vector.x
-                        cmd_vel.linear.y = hull_goal.vector.y
+                        cmd_vel.linear.x = min(hull_goal.vector.x, self.max_lat_speed)
+                        cmd_vel.linear.y = min(hull_goal.vector.y, self.max_lat_speed)
                     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                         rospy.logerr("world pose not found")
 

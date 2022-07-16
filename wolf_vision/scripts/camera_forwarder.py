@@ -7,7 +7,7 @@ import time
 
 def forwarder():
     rospy.init_node('camera_forwarder', anonymous=False)
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(30)
 
     camera = cv2.VideoCapture(2)
     bridge = CvBridge()
@@ -17,7 +17,7 @@ def forwarder():
    
     size = (frame_width, frame_height)
 
-    image_pub = rospy.Publisher('wolf_camera1/image_raw', Image, queue_size=10)
+    image_pub = rospy.Publisher('wolf_camera1/image_raw', Image, queue_size=1)
     writer = cv2.VideoWriter('test' + str(time.time()) + '.avi', 
                          cv2.VideoWriter_fourcc(*'MJPG'),
                          10, size)
@@ -25,8 +25,8 @@ def forwarder():
     while not rospy.is_shutdown():
         ret, frame = camera.read()
         
-        #final = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-        final = frame
+        final = cv2.rotate(frame, cv2.ROTATE_180)
+        #final = frame
         writer.write(final)
 
         image_pub.publish(bridge.cv2_to_imgmsg(final, "bgr8"))

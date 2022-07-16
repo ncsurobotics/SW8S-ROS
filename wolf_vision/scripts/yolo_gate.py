@@ -15,13 +15,11 @@ class gate_detector:
     focal_length = 381.36115
     classes = []
     is_debug = False
+    net = None
     confidence_threshold = 0.1
     gates = [(0,0,0),(0,0,0)] #(right_gate, left_gate) where gate = (x,y,confidence)
 
     def __init__(self):
-        self.image_sub = rospy.Subscriber("wolf_camera1/image_raw", Image, self.frame_callback)
-        self.bridge = CvBridge()
-
         #load the YOLO model
         rospack = rospkg.RosPack()
         root_path = rospack.get_path("wolf_vision")
@@ -31,6 +29,9 @@ class gate_detector:
                                         root_path + "/models/yolov4-tiny-gate_1000.weights")
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_DEFAULT)
         #net.setPreferableTarget(cv.dnn.DNN_TARGET_CUDA)
+
+        self.image_sub = rospy.Subscriber("wolf_camera1/image_raw", Image, self.frame_callback, queue_size=1)
+        self.bridge = CvBridge()
 
     def offset(self, origin, target):
         x = target[0] - origin[0]
@@ -113,7 +114,7 @@ class gate_detector:
             gate_transform.header.frame_id = "base_link"
             gate_transform.child_frame_id = "lgate"
             gate_transform.transform.translation.x = -math.cos(angle_to_gate[0])
-            gate_transform.transform.translation.y = math.sin(angle_to_gate[0])
+            gate_transform.transform.translation.y = math.sin(angle_to_gate[0]) + 20
             gate_transform.transform.translation.z = 0.0
             gate_transform.transform.rotation.x = 0
             gate_transform.transform.rotation.y = 0
