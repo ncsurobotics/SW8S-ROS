@@ -51,6 +51,9 @@ class PIDController:
         self.is_angle = is_angle
 
     def anglediff(self, a,b):
+        #https://stackoverflow.com/questions/1878907/how-can-i-find-the-difference-between-two-angles
+        #diff = a - b + math.pi
+        #return (diff - floor(diff/2*math.pi)*2*math.pi) - math.pi
         distances = [b-a, b - ((2*math.pi) - a), ((2*math.pi) - b) - a, b - ((2*math.pi) + a), ((2*math.pi) + b) - a]
         absdist = [abs(number) for number in distances]
         index = min(range(len(absdist)), key=absdist.__getitem__)
@@ -84,8 +87,10 @@ class Controller:
 
     delta_time = 0.0
     initial_time = 0.0
+    current_time = 0.0
 
     yaw_setpoint = 0.0
+    pitch_setpoint = 0.09
     depth_setpoint = 0.0
     
     max_lat_speed = 0.15
@@ -93,7 +98,7 @@ class Controller:
 
     def armed_callback(self, data: Bool):
         if self.armed != data.data:
-            time.sleep(2)
+            time.sleep(2)           #How blocking is this? threading timer callback https://stackoverflow.com/a/22182149
             self.armed = data.data
         
     def goal_callback(self, twist: Twist):
@@ -117,6 +122,7 @@ class Controller:
 
         depthPID = PIDController(0.37, 0.0, 0.0)
         yawPID = PIDController(-0.04, 0.0, 0.0, True)
+        pitchPID = PIDController(0.05, 0.0, 0.0, True)
 
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
@@ -124,8 +130,9 @@ class Controller:
         self.initial_time = rospy.get_time()
         while not rospy.is_shutdown():
             #calculate how much time is passing each loop
-            self.delta_time = rospy.get_time() - self.initial_time
-            self.initial_time = rospy.get_time()
+            self.current_time = rospy.get_time()
+            self.delta_time = self.current_time - self.initial_time
+            self.initial_time = self.current_time
             if self.armed:
                 #get the current robot position and give the appropriate pieces to the PID controllers
                 try:
@@ -135,17 +142,20 @@ class Controller:
 
                     #give states to the PID controllers
                     yawPID.set_state(tf_conversions.transformations.euler_from_quaternion(rot)[2])
+                    pitchPID.set_state(tf_conversions.transformations.euler_from_quaternion(rot)[1])
                     depthPID.set_state(odom.transform.translation.z)
-                    self.yawin_pub.publish(tf_conversions.transformations.euler_from_quaternion(rot)[2])
+                    self.yawin_pub.publish(yawPID.set_state)
 
                 except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                     print("failed to get transform")
                     pass
 
                 yawPID.set_setpoint(self.yaw_setpoint)
+                pitchPID.set_setpoint(self.pitch_setpoint)
                 depthPID.set_setpoint(self.depth_setpoint)
                 
                 yaw_control_out = yawPID.run_loop(self.delta_time)
+                pitch_control_out = pitchPID.run_loop(self.delta_time)
                 depth_control_out = depthPID.run_loop(self.delta_time)
                 self.yawout_pub.publish(yaw_control_out)
 
@@ -153,6 +163,7 @@ class Controller:
                 cmd_vel = Twist()
                 cmd_vel.linear.z = max(depth_control_out, self.max_vert_speed)
                 cmd_vel.angular.z = yaw_control_out
+                cmd_vel.angular.y = pitch_control_out
                 
                 if self.world_goal:
                     try:
