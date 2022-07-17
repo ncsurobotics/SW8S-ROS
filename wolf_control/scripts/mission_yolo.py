@@ -49,9 +49,10 @@ def mission():
 
     #hyper params
     submerge_depth = -2.45
-    dead_reckon_duration = 30
-    queue_depth = 4
+    submerge_wait = 4
     depth_tolerance = 0.3
+    
+    dead_reckon_duration = 30
     sigma_tolerance = 5
     should_turn = True
     should_discard_stale = True
@@ -77,7 +78,7 @@ def mission():
                     timer = 0
                 else:
                     rospy.logerr("counting")
-                if timer > queue_depth:
+                if timer > submerge_wait:
                     state = mission_states.SUBMERGE
                     saved_goal = odom   #this odom call seems redundant could use TransformStamped?
                     timer = 0
