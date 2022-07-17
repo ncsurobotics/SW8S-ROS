@@ -38,7 +38,7 @@ def mission():
     rospy.Subscriber("hardware_killswitch", Bool, setArm)
 
     tf_buffer = tf2_ros.Buffer()
-    listener = tf2_ros.TransformListener(tf_buffer)
+    listener = tf2_ros.TransformListener(tf_buffer)     #what does this do?
     rate = rospy.Rate(10) # 10hz
 
     timer = 0
@@ -51,12 +51,13 @@ def mission():
     submerge_depth = -2.45
     dead_reckon_duration = 30
     queue_depth = 4
+    depth_tolerance = 0.3
     sigma_tolerance = 5
     should_turn = True
     should_discard_stale = True
 
-    last_world_gate = None
-    last_base_gate = None
+    last_world_gate = None      #these are not updated
+    last_base_gate = None       #these are not updated
     no_left_count = 0
     no_right_count = 0
     left_count = 0
@@ -66,7 +67,7 @@ def mission():
 
     while not rospy.is_shutdown():
         try:
-            odom: TransformStamped = tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0))
+            odom: TransformStamped = tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0)) # assuming this is an anonymous function that also runs at the top of each loop is it necessary
             if state == mission_states.STOP:
                 goal = Twist()
                 goal.linear.z = submerge_depth
@@ -76,16 +77,16 @@ def mission():
                     timer = 0
                 else:
                     rospy.logerr("counting")
-                if timer > 4:
+                if timer > queue_depth:
                     state = mission_states.SUBMERGE
-                    saved_goal = odom
+                    saved_goal = odom   #this odom call seems redundant could use TransformStamped?
                     timer = 0
             elif state == mission_states.SUBMERGE:
                 goal = Twist()
                 goal.linear.z = submerge_depth
-                goal.angular.z = 3.1415 + saved_goal.transform.rotation.z
+                goal.angular.z = 3.1415 + saved_goal.transform.rotation.z  #Why does it need to rotate 3.1415?
                 goal_pub.publish(goal)
-                if (abs(odom.transform.translation.z - submerge_depth)) < 0.3:
+                if (abs(odom.transform.translation.z - submerge_depth)) < depth_tolerance: #this odom call seems redundant could use TransformStamped?
                     state = mission_states.MOVE_TO_GATE  
                     timer = 0
                     saved_goal = None        
@@ -93,41 +94,62 @@ def mission():
                 # find which gate vector is more stable
                 world_right_gate = None
                 base_right_gate = None
-                right_stable = False
+                right_stable = False    #unused
 
                 world_left_gate = None
                 base_left_gate = None
-                left_stable = False
+                left_stable = False     #unused
 
-                world_gate_vector = last_world_gate
-                base_gate_vector = last_base_gate
+                world_gate_vector = last_world_gate #originally always set to None
+                base_gate_vector = last_base_gate   #originally always set to None
                 try:
                     world_right_gate = tf_buffer.lookup_transform("odom", "gate", rospy.Time(0))
-                    base_right_gate = tf_buffer.lookup_transform("base_link", "gate", rospy.Time(0))
+                    base_right_gate = tf_buffer.lookup_transform("base_link", "gate", rospy.Time(0))    #could this be derived from TransformStamped and world_right_gate
                 except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
                     rospy.logerr("no right gate")
                 try:
-                    world_left_gate = tf_buffer.lookup_transform("odom", "left_gate", rospy.Time(0))
-                    base_left_gate = tf_buffer.lookup_transform("base_link", "left_gate", rospy.Time(0))
+                    world_left_gate = tf_buffer.lookup_transform("odom", "left_gate", rospy.Time(0))    
+                    base_left_gate = tf_buffer.lookup_transform("base_link", "left_gate", rospy.Time(0))    #could this be derived from TransformStamped and world_left_gate
                 except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
                     rospy.logerr("no left gate")
                 
                 # move towards the stable point
-                if world_right_gate is not None:
-                    if no_left_count > 5:
-                        world_gate_vector = world_right_gate
-                        base_gate_vector = base_right_gate
-                    no_right_count = 0
-                    right_count += 1
-                else:
-                    no_right_count += 1
+#                if world_right_gate is not None:
+#                    if no_left_count > 5:
+#                        world_gate_vector = world_right_gate
+#                        base_gate_vector = base_right_gate
+#                    no_right_count = 0
+#                    right_count += 1
+#                else:
+#                    no_right_count += 1
+#                if world_left_gate is not None:
+#                   world_gate_vector = world_left_gate
+#                   base_gate_vector = base_left_gate
+#                    no_left_count = 0
+#                    left_count += 1
+#                else:
+#                    no_left_count += 1
+                   
                 if world_left_gate is not None:
-                    world_gate_vector = world_left_gate
-                    base_gate_vector = base_left_gate
+                    if no_left_count <= no_right_count or left_count >= right_count:
+                        world_gate_vector = world_left_gate
+                        base_gate_vector = base_left_gate
                     no_left_count = 0
                     left_count += 1
                 else:
                     no_left_count += 1
+                    if no_left_count > 2
+                        left_count = 0
+                if world_right_gate is not None:
+                    if world_gate_vector == last_world_gate:
+                        world_gate_vector = right_world_gate
+                        base_gate_vector = right_base_gate
+                    no_right_count = 0
+                    right_count += 1
+                else:
+                    no_right_count += 1
+                    if no_right_count > 2
+                        left_count = 0
 
                 if base_gate_vector is not None and world_gate_vector is not None:
                     angle_to_gate = math.atan2(base_gate_vector.transform.translation.y, base_gate_vector.transform.translation.x)
@@ -138,9 +160,11 @@ def mission():
                     goal.linear.z = submerge_depth
                     if should_turn:
                         goal.angular.z = odom.transform.rotation.z + angle_to_gate + 3.1415
-                        pass
+                        pass    #why pass?
                     saved_goal = goal
                     goal_pub.publish(goal)
+                    last_base_gate = base_gate_vector
+                    last_world_gate = world_gate_vector
                 if no_left_count > 3 and no_right_count > 3:
                     rospy.logwarn("missed too many, dead reckoning")
                     state = mission_states.MOVE_THROUGH_GATE
