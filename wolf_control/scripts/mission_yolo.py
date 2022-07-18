@@ -114,9 +114,9 @@ def mission():
                 
                 # move towards the stable point
                 if world_right_gate is not None:
-                    if no_left_count > 5:
-                        world_gate_vector = world_right_gate
-                        base_gate_vector = base_right_gate
+                    #if no_left_count > 5:
+                    world_gate_vector = world_right_gate
+                    base_gate_vector = base_right_gate
                     no_right_count = 0
                     right_count += 1
                 else:
@@ -141,7 +141,8 @@ def mission():
                         pass
                     saved_goal = goal
                     goal_pub.publish(goal)
-                if no_left_count > 3 and no_right_count > 3:
+                    rospy.logerr("left: " + str(no_left_count) + " right: " + str(no_right_count))
+                if no_left_count > 1 and no_right_count > 1:
                     rospy.logwarn("missed too many, dead reckoning")
                     state = mission_states.MOVE_THROUGH_GATE
                     timer = 0
