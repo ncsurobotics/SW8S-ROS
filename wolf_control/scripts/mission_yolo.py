@@ -40,7 +40,8 @@ def mission():
 
     tf_buffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tf_buffer)
-    rate = rospy.Rate(10) # 10hz
+    ros_hertz = 10
+    rate = rospy.Rate(ros_hertz) # 10hz
 
     timer = 0
     saved_goal = None
@@ -50,6 +51,8 @@ def mission():
 
     #hyper params
     submerge_depth = -2.45
+    depth_tolerance = 0.3
+    
     dead_reckon_duration = 120
     queue_depth = 4
     sigma_tolerance = 5
@@ -87,7 +90,7 @@ def mission():
                 goal.linear.z = submerge_depth
                 goal.angular.z = 3.1415 + saved_goal.transform.rotation.z
                 goal_pub.publish(goal)
-                if (abs(odom.transform.translation.z - submerge_depth)) < 0.3:
+                if (abs(odom.transform.translation.z - submerge_depth)) < depth_tolerance:
                     state = mission_states.MOVE_TO_GATE
                     timer = 0
                     saved_goal = None        

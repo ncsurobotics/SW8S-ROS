@@ -31,6 +31,56 @@ Questions for Ore:
     
 '''
 
+class CubicTrajectory:
+    controller_init_pos = 0.0
+    controller_current_pos = 0.0
+    controller_target_pos = 0.4
+    
+    controller_init_vel = 0.0
+    controller_current_vel = 0.0
+    controller_target_vel = 0.4
+    
+    initial_pos = 0.0
+    initial_vel = 0.0
+    final_pos = 1.0
+    final_vel = 0.0
+    
+    time_init = 0.0
+    time_final = 4.0
+    
+    ros_hertz = 3.0
+    samples = 40.0
+    
+    a = np.array([[0.0], [0.0], [0.0], [0.0]]) 
+
+    def __init__(self, t0 = 0.0, tf = 4.0, ros_hz = 10.0):
+        self.time_initial = t0
+        self.time_final = tf
+        self.ros_hertz = ros_hz
+        self.samples = (self.time_final - self.time_init) * self.ros_hertz
+    
+        s_constraints = np.array([[self.initial_pos], [self.initial_vel], [self.final_pos], [self.final_vel]])
+        time = np.array([[1, self.time_init, math.pow(self.time_init,2), math.pow(self.time_init,3)], [0, 1, 2*self.time_init, 3*math.pow(self.time_init,2)], [1, self.time_final, math.pow(self.time_final,2), math.pow(self.time_final,3)], [0, 1, 2*self.time_final, 3*math.pow(self.time_final,2)]])
+        time_inv = np.linalg.inv(time)
+        self.a = np.dot(time_inv, s_constraints)    
+
+    def currentpos(self, timer):
+        rel_time = timer / self.ros_hertz 
+        s = self.a[0,0] + (self.a[1,0] * rel_time) + (self.a[2,0] * math.pow(rel_time,2)) + (self.a[3,0] * math.pow(rel_time,3))
+        self.controller_current_pos = (1-s) * self.controller_init_pos + s * self.controller_target_pos
+        return self.controller_current_pos
+
+    def currentvel(self, timer):
+        rel_time = timer / self.ros_hertz 
+        s = (self.a[1,0]) + (self.a[2,0] * rel_time) + (self.a[3,0] * math.pow(rel_time,2))
+        self.controller_current_vel = (1-s) * self.controller_init_vel + s * self.controller_target_vel
+        return self.controller_current_vel
+
+    def printvals(self):
+        print(self.a)
+        print(self.controller_current)
+
+
 class PIDController:
     state = 0.0
     setpoint = 0.0
