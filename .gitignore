@@ -2,3 +2,5 @@ build/
 devel/
 install/
 *.swp
+
+*.bak

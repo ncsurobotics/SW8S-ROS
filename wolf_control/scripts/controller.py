@@ -68,10 +68,11 @@ class PIDController:
     
     def set_setpoint(self, newset):
         self.setpoint = newset
+        self.total_error = 0
 
     def run_loop(self, deltaTime):
         self.compute_error()
-        deltaError = (self.error - self.previous_error) / deltaTime
+        deltaError = -(self.error - self.previous_error) / deltaTime
         self.total_error += self.error
         output = (self.error * self.p) + (deltaError * self.d) + (self.total_error * self.i)
         return output
@@ -106,7 +107,7 @@ class Controller:
 
     def __init__(self):
         rospy.init_node('controller', anonymous=False)
-        rate = rospy.Rate(20)
+        rate = rospy.Rate(100)
 
         rospy.Subscriber("wolf_control/goal", Twist, self.goal_callback)
         rospy.Subscriber("hardware_killswitch", Bool, self.armed_callback)
@@ -116,7 +117,7 @@ class Controller:
 
 
         depthPID = PIDController(0.37, 0.0, 0.0)
-        yawPID = PIDController(-0.04, 0.0, 0.0, True)
+        yawPID = PIDController(-0.04, 0.00, 0.0, True)
 
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)

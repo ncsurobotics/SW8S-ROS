@@ -9,6 +9,8 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import String, Float64
 from geometry_msgs.msg import TransformStamped, Quaternion
 import tf2_ros
+import time
+
 
 class gate_detector:
     focal_length = 381.36115
@@ -30,8 +32,10 @@ class gate_detector:
         self.classes = open(root_path + "/models/gate.names").read().strip().split('\n')
         self.net = cv2.dnn.readNetFromDarknet(root_path + "/models/yolov4-tiny-gate.cfg", 
                                         root_path + "/models/yolov4-tiny-gate_1000.weights")
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         #self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_DEFAULT)
-        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL_FP16)
+        #self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
         rate = rospy.Rate(20)
         while not rospy.is_shutdown():
             if self.gframe is not None:
