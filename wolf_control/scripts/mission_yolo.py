@@ -17,20 +17,6 @@ class mission_states(Enum):
     MOVE_THROUGH_GATE = 3
 
 class image_gate:
-    no_left_count = 0
-    no_right_count = 0
-    left_count = 0
-    right_count = 0
-    no_gate_count = 0
-    good_gate_count = 0    
-    
-    world_right_gate = None
-    base_right_gate = None 
-    world_left_gate = None 
-    base_right_gate = None
-    world_gate_vector = None
-    base_gate_vector = None
-
     def __init__(self):
         self.no_left_count = 0
         self.no_right_count = 0
@@ -71,7 +57,6 @@ class image_gate:
         
     def checkConfidence(self):
         if self.world_right_gate is not None:
-            #if no_left_count > 5:
             self.world_gate_vector = self.world_right_gate
             self.base_gate_vector = self.base_right_gate
             self.no_right_count = 0
@@ -79,7 +64,8 @@ class image_gate:
         else:
             self.no_right_count += 1
             self.right_count = 0
-        if self.world_left_gate is not None:
+        
+        if self.world_left_gate is not None and self.left_count > self.right_count:
             self.world_gate_vector = self.world_left_gate
             self.base_gate_vector = self.base_left_gate
             self.no_left_count = 0
@@ -93,7 +79,7 @@ class image_gate:
             self.world_right_gate = tf_buffer.lookup_transform("odom", "gate", rospy.Time(0))
             self.base_right_gate = tf_buffer.lookup_transform("base_link", "gate", rospy.Time(0))
             if self.world_right_gate is not None:
-                if (self.world_right_gate.header.stamp - rospy.Time(0).now()).to_sec() > 1:
+                if (self.world_right_gate.header.stamp - rospy.Time(0).now()).to_sec() > 1:     #this rospy.Time() had no zero, why does it have the .now()
                     self.world_right_gate = None
                     self.base_right_gate = None
         except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
@@ -184,7 +170,8 @@ def mission():
                 goal.angular.z = 3.1415 + saved_goal.transform.rotation.z
                 goal_pub.publish(goal)
                 if (abs(odom.transform.translation.z - submerge_depth)) < depth_tolerance:
-                    state = mission_states.MOVE_TO_GATE
+                    state = mission_states.LOOK_FOR_GATE
+                    img_gate.reset()
                     timer = 0
                     saved_goal = None        
                     search_angle = odom.transform.rotation.z

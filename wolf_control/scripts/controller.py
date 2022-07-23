@@ -32,30 +32,20 @@ Questions for Ore:
 '''
 
 class CubicTrajectory:
-    controller_init_pos = 0.0
-    controller_current_pos = 0.0
-    controller_target_pos = 0.4
-    
-    controller_init_vel = 0.0
-    controller_current_vel = 0.0
-    controller_target_vel = 0.4
-    
-    initial_pos = 0.0
-    initial_vel = 0.0
-    final_pos = 1.0
-    final_vel = 0.0
-    
-    time_init = 0.0
-    time_final = 4.0
-    
-    ros_hertz = 3.0
-    samples = 40.0
-    
-    a = np.array([[0.0], [0.0], [0.0], [0.0]]) 
-
-    def __init__(self, init_pos = 0.0, tar_pos = 0.4, t0 = 0.0, tf = 4.0, ros_hz = 10.0):
+    def __init__(self, init_pos = 0.0, tar_pos = 0.4, t0 = 0.0, tf = 4.0, ros_hz = 100.0):
         self.controller_init_pos = init_pos
+        self.controller_current_pos = init_pos
         self.controller_target_pos = tar_pos
+        self.direction = (self.controller_target_pos > self.controller_initial_pos)     #true if moving positively
+        
+        self.controller_init_vel = 0.0
+        self.controller_current_vel = 0.0
+        self.controller_target_vel = 0.0
+        
+        self.initial_pos = 0.0
+        self.initial_vel = 0.0
+        self.final_pos = 1.0
+        self.final_vel = 0.0
         
         self.time_initial = t0
         self.time_final = tf
@@ -67,13 +57,18 @@ class CubicTrajectory:
         time_inv = np.linalg.inv(time)
         self.a = np.dot(time_inv, s_constraints)
         
-    def newtarget(self, init_pos = 0.0, tar_pos = 0.4, t0 = 0.0, tf = 4.0, ros_hz = None):
-        self.controller_init_pos = init_pos
+    def newtarget(self, init_pos = None, tar_pos = 0.4, t0 = 0.0, tf = 4.0, ros_hz = None):
+        if init_pos is None:
+            self.controller_init_pos = self.controller_current_pos
+        else:
+            self.controller_init_pos = init_pos
+        
         self.controller_target_pos = tar_pos
-        if ros_hz is not None, then:
+        self.direction = (self.controller_target_pos > self.controller_initial_pos)     #true if moving positively
+        if ros_hz is not None:
             ros_hertz = ros_hz
-        fi
-        if t0 is not self.time_initial or tf is not self.time_final, then:
+        
+        if t0 is not self.time_initial or tf is not self.time_final:
             self.time_initial = t0
             self.time_final = tf
             self.ros_hertz = ros_hz
@@ -83,13 +78,17 @@ class CubicTrajectory:
             time = np.array([[1, self.time_init, math.pow(self.time_init,2), math.pow(self.time_init,3)], [0, 1, 2*self.time_init, 3*math.pow(self.time_init,2)], [1, self.time_final, math.pow(self.time_final,2), math.pow(self.time_final,3)], [0, 1, 2*self.time_final, 3*math.pow(self.time_final,2)]])
             time_inv = np.linalg.inv(time)
             self.a = np.dot(time_inv, s_constraints)
-        fi
-    
+        
     
     def pos(self, timer):
         rel_time = timer / self.ros_hertz 
         s = self.a[0,0] + (self.a[1,0] * rel_time) + (self.a[2,0] * math.pow(rel_time,2)) + (self.a[3,0] * math.pow(rel_time,3))
         self.controller_current_pos = (1-s) * self.controller_init_pos + s * self.controller_target_pos
+        if self.direction:
+            self.controller_current_pos = max(self.controller_target_pos, min(self.controller_current_pos, self.controller_init_pos)
+        else:
+            self.controller_current_pos = max(self.controller_init_pos, min(self.controller_current_pos, self.controller_target_pos)
+        
         return self.controller_current_pos
 
     def vel(self, timer):
@@ -227,16 +226,12 @@ class Controller:
                     print("failed to get transform")
                     pass
                     
-                if mission_state == "LOOK_FOR_GATE", then:
-                    if yawLook.pos(timer) > yawLook.controller_final_pos, then:
-                        yaw_control_out = yawLook.controller_final_pos
-                    else:
-                        yaw_control_out = yawLook.controller_current_pos
-                #add stop state/directionality
+                if mission_state == "LOOK_FOR_GATE":
+                    yaw_control_out = yawLook.pos(timer)
                 else:
                     yawPID.set_setpoint(self.yaw_setpoint)
                     yaw_control_out = yawPID.run_loop(self.delta_time)
-                fi
+                
                     
                 depthPID.set_setpoint(self.depth_setpoint)
                 depth_control_out = depthPID.run_loop(self.delta_time
@@ -257,7 +252,7 @@ class Controller:
                         rospy.logerr("world pose not found")
                     
                     self.vel_pub.publish(cmd_vel)
-                fi
+                
             timer += 1
             rate.sleep()
 
