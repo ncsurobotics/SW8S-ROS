@@ -4,7 +4,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from tf2_geometry_msgs import Vector3Stamped
 from geometry_msgs.msg import TransformStamped
-from std_msgs.msg import Float64, Bool
+from std_msgs.msg import Float64, Bool, String
 import tf2_ros
 import tf_conversions
 import time
@@ -30,6 +30,77 @@ Questions for Ore:
     - tf transformations
     
 '''
+
+class CubicTrajectory:
+    def __init__(self, init_pos = 0.0, tar_pos = 0.3, t0 = 0.0, tf = 4.0, ros_hz = 100.0):
+        self.controller_init_pos = init_pos
+        self.controller_current_pos = init_pos
+        self.controller_target_pos = tar_pos
+        self.direction = (self.controller_target_pos > self.controller_initial_pos)     #true if moving positively
+        
+        self.controller_init_vel = 0.0
+        self.controller_current_vel = 0.0
+        self.controller_target_vel = 0.0
+        
+        self.initial_pos = 0.0
+        self.initial_vel = 0.0
+        self.final_pos = 1.0
+        self.final_vel = 0.0
+        
+        self.time_initial = t0
+        self.time_final = tf
+        self.ros_hertz = ros_hz
+        self.samples = (self.time_final - self.time_init) * self.ros_hertz
+    
+        s_constraints = np.array([[self.initial_pos], [self.initial_vel], [self.final_pos], [self.final_vel]])
+        time = np.array([[1, self.time_init, math.pow(self.time_init,2), math.pow(self.time_init,3)], [0, 1, 2*self.time_init, 3*math.pow(self.time_init,2)], [1, self.time_final, math.pow(self.time_final,2), math.pow(self.time_final,3)], [0, 1, 2*self.time_final, 3*math.pow(self.time_final,2)]])
+        time_inv = np.linalg.inv(time)
+        self.a = np.dot(time_inv, s_constraints)
+        
+    def newtarget(self, init_pos = None, tar_pos = 0.3, t0 = 0.0, tf = 4.0, ros_hz = None):
+        if init_pos is None:
+            self.controller_init_pos = self.controller_current_pos
+        else:
+            self.controller_init_pos = init_pos
+        
+        self.controller_target_pos = tar_pos
+        self.direction = (self.controller_target_pos > self.controller_initial_pos)     #true if moving positively
+        if ros_hz is not None:
+            ros_hertz = ros_hz
+        
+        if t0 is not self.time_initial or tf is not self.time_final:
+            self.time_initial = t0
+            self.time_final = tf
+            self.ros_hertz = ros_hz
+            self.samples = (self.time_final - self.time_init) * self.ros_hertz
+        
+            s_constraints = np.array([[self.initial_pos], [self.initial_vel], [self.final_pos], [self.final_vel]])
+            time = np.array([[1, self.time_init, math.pow(self.time_init,2), math.pow(self.time_init,3)], [0, 1, 2*self.time_init, 3*math.pow(self.time_init,2)], [1, self.time_final, math.pow(self.time_final,2), math.pow(self.time_final,3)], [0, 1, 2*self.time_final, 3*math.pow(self.time_final,2)]])
+            time_inv = np.linalg.inv(time)
+            self.a = np.dot(time_inv, s_constraints)
+        
+    
+    def pos(self, timer):
+        rel_time = timer / self.ros_hertz 
+        s = self.a[0,0] + (self.a[1,0] * rel_time) + (self.a[2,0] * math.pow(rel_time,2)) + (self.a[3,0] * math.pow(rel_time,3))
+        self.controller_current_pos = (1-s) * self.controller_init_pos + s * self.controller_target_pos
+        if self.direction:
+            self.controller_current_pos = max(self.controller_target_pos, min(self.controller_current_pos, self.controller_init_pos))
+        else:
+            self.controller_current_pos = max(self.controller_init_pos, min(self.controller_current_pos, self.controller_target_pos))
+        
+        return self.controller_current_pos
+
+    def vel(self, timer):
+        rel_time = timer / self.ros_hertz 
+        s = (self.a[1,0]) + (self.a[2,0] * rel_time) + (self.a[3,0] * math.pow(rel_time,2))
+        self.controller_current_vel = (1-s) * self.controller_init_vel + s * self.controller_target_vel
+        return self.controller_current_vel
+
+    def printvals(self):
+        print(self.a)
+        print(self.controller_current)
+
 
 class PIDController:
     state = 0.0
@@ -83,8 +154,13 @@ class Controller:
     world_goal = None
     armed = False
 
+    mission_state = None
+
     delta_time = 0.0
     initial_time = 0.0
+    current_time = 0.0
+    
+    ros_hertz = 100
 
     yaw_setpoint = 0.0
     depth_setpoint = 0.0
@@ -105,28 +181,35 @@ class Controller:
         self.world_goal.vector.y = twist.linear.y
         self.world_goal.header.frame_id = "odom"
 
+    def state_callback(self, state: String):
+        timer = 0
+        self.mission_state = state
+
     def __init__(self):
         rospy.init_node('controller', anonymous=False)
-        rate = rospy.Rate(100)
+        rate = rospy.Rate(ros_hertz)
 
         rospy.Subscriber("wolf_control/goal", Twist, self.goal_callback)
         rospy.Subscriber("hardware_killswitch", Bool, self.armed_callback)
+        rospy.Subscriber("wolf_control/mission_state", String, self.state_callback)
         self.vel_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
         self.yawout_pub = rospy.Publisher("yaw_out", Float64, queue_size=10)
         self.yawin_pub = rospy.Publisher("yaw_state", Float64, queue_size=10)
 
-
         depthPID = PIDController(0.37, 0.0, 0.0)
         yawPID = PIDController(-0.04, 0.00, 0.0, True)
-
+        
+        yawLook = cubicTrajectory(0.0, 0.3, 0.0, 5.0, ros_hertz)
+        
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
 
         self.initial_time = rospy.get_time()
         while not rospy.is_shutdown():
             #calculate how much time is passing each loop
-            self.delta_time = rospy.get_time() - self.initial_time
-            self.initial_time = rospy.get_time()
+            self.current_time = rospy.get_time()
+            self.delta_time = self.current_time - self.initial_time
+            self.initial_time = self.current_time
             if self.armed:
                 #get the current robot position and give the appropriate pieces to the PID controllers
                 try:
@@ -142,12 +225,17 @@ class Controller:
                 except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                     print("failed to get transform")
                     pass
-
-                yawPID.set_setpoint(self.yaw_setpoint)
-                depthPID.set_setpoint(self.depth_setpoint)
+                    
+                if mission_state == "LOOK_FOR_GATE":
+                    yaw_control_out = yawLook.pos(timer)
+                else:
+                    yawPID.set_setpoint(self.yaw_setpoint)
+                    yaw_control_out = yawPID.run_loop(self.delta_time)
                 
-                yaw_control_out = yawPID.run_loop(self.delta_time)
+                    
+                depthPID.set_setpoint(self.depth_setpoint)
                 depth_control_out = depthPID.run_loop(self.delta_time)
+                    
                 self.yawout_pub.publish(yaw_control_out)
 
                 #set thrusters to move according to movement controllers
@@ -162,8 +250,10 @@ class Controller:
                         cmd_vel.linear.y = min(hull_goal.vector.y, self.max_lat_speed)
                     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                         rospy.logerr("world pose not found")
-
-                self.vel_pub.publish(cmd_vel)
+                    
+                    self.vel_pub.publish(cmd_vel)
+                
+            timer += 1
             rate.sleep()
 
 
