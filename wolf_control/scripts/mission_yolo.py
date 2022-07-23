@@ -136,7 +136,7 @@ def mission():
     submerge_depth = -2.45
     depth_tolerance = 0.3
     
-    dead_reckon_duration = 120
+    dead_reckon_duration = 5
     queue_depth = 4
     sigma_tolerance = 5
     should_turn = True
@@ -151,8 +151,10 @@ def mission():
             odom: TransformStamped = tf_buffer.lookup_transform("odom", "base_link", rospy.Time(0))
             if state == mission_states.STOP:
                 goal = Twist()
-                goal.linear.z = submerge_depth
+                goal.linear.z = -0.2
                 goal_pub.publish(goal)
+                
+                
             elif state == mission_states.WAIT_FOR_ARM:
                 if arm == False:
                     timer = 0
