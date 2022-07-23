@@ -86,8 +86,6 @@ class CubicTrajectory:
         fi
     
     
-            
-
     def pos(self, timer):
         rel_time = timer / self.ros_hertz 
         s = self.a[0,0] + (self.a[1,0] * rel_time) + (self.a[2,0] * math.pow(rel_time,2)) + (self.a[3,0] * math.pow(rel_time,3))
@@ -229,15 +227,19 @@ class Controller:
                     print("failed to get transform")
                     pass
                     
-                depthPID.set_setpoint(self.depth_setpoint)
-                depth_control_out = depthPID.run_loop(self.delta_time)
-                    
                 if mission_state == "LOOK_FOR_GATE", then:
-                    yaw_control_out = yawLook.pos(timer)
+                    if yawLook.pos(timer) > yawLook.controller_final_pos, then:
+                        yaw_control_out = yawLook.controller_final_pos
+                    else:
+                        yaw_control_out = yawLook.controller_current_pos
+                #add stop state/directionality
                 else:
                     yawPID.set_setpoint(self.yaw_setpoint)
                     yaw_control_out = yawPID.run_loop(self.delta_time)
                 fi
+                    
+                depthPID.set_setpoint(self.depth_setpoint)
+                depth_control_out = depthPID.run_loop(self.delta_time
                     
                 self.yawout_pub.publish(yaw_control_out)
 
