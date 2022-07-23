@@ -32,7 +32,7 @@ Questions for Ore:
 '''
 
 class CubicTrajectory:
-    def __init__(self, init_pos = 0.0, tar_pos = 0.4, t0 = 0.0, tf = 4.0, ros_hz = 100.0):
+    def __init__(self, init_pos = 0.0, tar_pos = 0.3, t0 = 0.0, tf = 4.0, ros_hz = 100.0):
         self.controller_init_pos = init_pos
         self.controller_current_pos = init_pos
         self.controller_target_pos = tar_pos
@@ -57,7 +57,7 @@ class CubicTrajectory:
         time_inv = np.linalg.inv(time)
         self.a = np.dot(time_inv, s_constraints)
         
-    def newtarget(self, init_pos = None, tar_pos = 0.4, t0 = 0.0, tf = 4.0, ros_hz = None):
+    def newtarget(self, init_pos = None, tar_pos = 0.3, t0 = 0.0, tf = 4.0, ros_hz = None):
         if init_pos is None:
             self.controller_init_pos = self.controller_current_pos
         else:
@@ -199,7 +199,7 @@ class Controller:
         depthPID = PIDController(0.37, 0.0, 0.0)
         yawPID = PIDController(-0.04, 0.00, 0.0, True)
         
-        yawLook = cubicTrajectory(0.0, 0.4, 0.0, 5.0, ros_hertz)
+        yawLook = cubicTrajectory(0.0, 0.3, 0.0, 5.0, ros_hertz)
         
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
