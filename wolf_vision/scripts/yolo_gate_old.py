@@ -9,6 +9,8 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import String, Float64
 from geometry_msgs.msg import TransformStamped, Quaternion
 import tf2_ros
+import time
+
 
 class gate_detector:
     focal_length = 381.36115
@@ -30,9 +32,11 @@ class gate_detector:
         self.classes = open(root_path + "/models/gate.names").read().strip().split('\n')
         self.net = cv2.dnn.readNetFromDarknet(root_path + "/models/yolov4-tiny-gate.cfg", 
                                         root_path + "/models/yolov4-tiny-gate_1000.weights")
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         #self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_DEFAULT)
-        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL_FP16)
-        rate = rospy.Rate(20)
+        #self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+        rate = rospy.Rate(15)
         while not rospy.is_shutdown():
             if self.gframe is not None:
                 self.frame_loop(self.gframe)
@@ -96,7 +100,7 @@ class gate_detector:
             gate_transform.header.frame_id = "base_link"
             gate_transform.child_frame_id = "gate"
             gate_transform.transform.translation.x = -math.cos(angle_to_gate[0])
-            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0])
+            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0]) / 4.0
             gate_transform.transform.translation.z = 0.0
             gate_transform.transform.rotation.x = 0
             gate_transform.transform.rotation.y = 0
@@ -114,7 +118,7 @@ class gate_detector:
             gate_transform.header.frame_id = "base_link"
             gate_transform.child_frame_id = "lgate"
             gate_transform.transform.translation.x = -math.cos(angle_to_gate[0])
-            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0])
+            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0]) / 3.0
             gate_transform.transform.translation.z = 0.0
             gate_transform.transform.rotation.x = 0
             gate_transform.transform.rotation.y = 0
