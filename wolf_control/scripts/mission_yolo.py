@@ -133,10 +133,10 @@ def mission():
     left_gate_queue = []
 
     #hyper params
-    submerge_depth = -2.45
+    submerge_depth = -2.25
     depth_tolerance = 0.3
     
-    dead_reckon_duration = 5
+    dead_reckon_duration = 10
     queue_depth = 4
     sigma_tolerance = 5
     should_turn = True
@@ -169,7 +169,7 @@ def mission():
             elif state == mission_states.SUBMERGE:
                 goal = Twist()
                 goal.linear.z = submerge_depth
-                goal.angular.z = 3.1415 + saved_goal.transform.rotation.z
+                goal.angular.z = 3.1415 + saved_goal.transform.rotation.z - 0.261799388
                 goal_pub.publish(goal)
                 if (abs(odom.transform.translation.z - submerge_depth)) < depth_tolerance:
                     state = mission_states.LOOK_FOR_GATE
@@ -221,7 +221,7 @@ def mission():
                     goal_pub.publish(goal)
                     rospy.logerr("left: " + str(img_gate.no_left_count) + " right: " + str(img_gate.no_right_count))
                     
-                if img_gate.no_left_count > 5 and img_gate.no_right_count > 5:
+                if no_left_count > 0 and no_right_count > 0:
                     rospy.logwarn("missed too many, dead reckoning")
                     state = mission_states.MOVE_THROUGH_GATE
                     timer = 0

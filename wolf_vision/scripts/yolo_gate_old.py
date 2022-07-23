@@ -36,7 +36,7 @@ class gate_detector:
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         #self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_DEFAULT)
         #self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
-        rate = rospy.Rate(20)
+        rate = rospy.Rate(15)
         while not rospy.is_shutdown():
             if self.gframe is not None:
                 self.frame_loop(self.gframe)
@@ -100,7 +100,7 @@ class gate_detector:
             gate_transform.header.frame_id = "base_link"
             gate_transform.child_frame_id = "gate"
             gate_transform.transform.translation.x = -math.cos(angle_to_gate[0])
-            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0])
+            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0]) / 4.0
             gate_transform.transform.translation.z = 0.0
             gate_transform.transform.rotation.x = 0
             gate_transform.transform.rotation.y = 0
@@ -118,7 +118,7 @@ class gate_detector:
             gate_transform.header.frame_id = "base_link"
             gate_transform.child_frame_id = "lgate"
             gate_transform.transform.translation.x = -math.cos(angle_to_gate[0])
-            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0])
+            gate_transform.transform.translation.y = -math.sin(angle_to_gate[0]) / 3.0
             gate_transform.transform.translation.z = 0.0
             gate_transform.transform.rotation.x = 0
             gate_transform.transform.rotation.y = 0

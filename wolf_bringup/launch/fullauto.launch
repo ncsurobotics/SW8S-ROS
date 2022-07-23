@@ -7,6 +7,6 @@
   <node name="meb" pkg="wolf_serial" type="meb.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
   <node name="killswitch" pkg="wolf_serial" type="compnokill.py"/>
   <node name="camera_forwarder" pkg="wolf_vision" type="camera_forwarder.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
-  <node name="gate_detector" pkg="wolf_vision" type="yolo_gate.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+  <node name="gate_detector" pkg="wolf_vision" type="yolo_gate_old.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
   <node name="mission" pkg="wolf_control" type="mission_yolo.py" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
 </launch>
