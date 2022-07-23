@@ -4,7 +4,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from tf2_geometry_msgs import Vector3Stamped
 from geometry_msgs.msg import TransformStamped
-from std_msgs.msg import Float64, Bool
+from std_msgs.msg import Float64, Bool, String
 import tf2_ros
 import tf_conversions
 import time
@@ -85,9 +85,9 @@ class CubicTrajectory:
         s = self.a[0,0] + (self.a[1,0] * rel_time) + (self.a[2,0] * math.pow(rel_time,2)) + (self.a[3,0] * math.pow(rel_time,3))
         self.controller_current_pos = (1-s) * self.controller_init_pos + s * self.controller_target_pos
         if self.direction:
-            self.controller_current_pos = max(self.controller_target_pos, min(self.controller_current_pos, self.controller_init_pos)
+            self.controller_current_pos = max(self.controller_target_pos, min(self.controller_current_pos, self.controller_init_pos))
         else:
-            self.controller_current_pos = max(self.controller_init_pos, min(self.controller_current_pos, self.controller_target_pos)
+            self.controller_current_pos = max(self.controller_init_pos, min(self.controller_current_pos, self.controller_target_pos))
         
         return self.controller_current_pos
 
@@ -234,7 +234,7 @@ class Controller:
                 
                     
                 depthPID.set_setpoint(self.depth_setpoint)
-                depth_control_out = depthPID.run_loop(self.delta_time
+                depth_control_out = depthPID.run_loop(self.delta_time)
                     
                 self.yawout_pub.publish(yaw_control_out)
 

@@ -12,9 +12,7 @@ def forwarder():
 
     rospy.init_node('camera_forwarder', anonymous=False)
     
-    # Note: publishing at 2x FPS of camera prevents reading of old frames
-    # via rviz and other tools (common strategy for realtime streams)
-    rate = rospy.Rate(fps * 2)
+    rate = rospy.Rate(fps)
 
     camera = cv2.VideoCapture(2)
     bridge = CvBridge()
