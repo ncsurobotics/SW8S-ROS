@@ -20,7 +20,10 @@ class MEB:
         #serial read loop
         with serial.Serial(serial_device, serial_rate, timeout=None) as ser:
             while not rospy.is_shutdown():
-                line = ser.readline().decode('ascii')
+                try:
+                    line = ser.readline().decode('ascii')
+                except:
+                    line = ""
                 kill_match = re.search(kill_regex, line)
                 gyro_match = re.search(gyro_regex, line)
                 if kill_match:
