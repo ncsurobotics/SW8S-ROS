@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import math
 import rospy
+import numpy as np
 from geometry_msgs.msg import Twist
 from tf2_geometry_msgs import Vector3Stamped
 from geometry_msgs.msg import TransformStamped
@@ -42,17 +43,17 @@ class CubicTrajectory:
         self.controller_current_vel = 0.0
         self.controller_target_vel = 0.0
         
-        self.initial_pos = 0.0
-        self.initial_vel = 0.0
+        self.init_pos = 0.0
+        self.init_vel = 0.0
         self.final_pos = 1.0
         self.final_vel = 0.0
         
-        self.time_initial = t0
+        self.time_init = t0
         self.time_final = tf
         self.freq = ros_hz
         self.samples = (self.time_final - self.time_init) * self.freq
     
-        s_constraints = np.array([[self.initial_pos], [self.initial_vel], [self.final_pos], [self.final_vel]])
+        s_constraints = np.array([[self.init_pos], [self.init_vel], [self.final_pos], [self.final_vel]])
         time = np.array([[1, self.time_init, math.pow(self.time_init,2), math.pow(self.time_init,3)], [0, 1, 2*self.time_init, 3*math.pow(self.time_init,2)], [1, self.time_final, math.pow(self.time_final,2), math.pow(self.time_final,3)], [0, 1, 2*self.time_final, 3*math.pow(self.time_final,2)]])
         time_inv = np.linalg.inv(time)
         self.a = np.dot(time_inv, s_constraints)
@@ -68,13 +69,13 @@ class CubicTrajectory:
         if ros_hz is not None:
             self.freq = ros_hz
         
-        if t0 is not self.time_initial or tf is not self.time_final:
-            self.time_initial = t0
+        if t0 is not self.time_init or tf is not self.time_final:
+            self.time_init = t0
             self.time_final = tf
             self.freq = ros_hz
             self.samples = (self.time_final - self.time_init) * self.freq
         
-            s_constraints = np.array([[self.initial_pos], [self.initial_vel], [self.final_pos], [self.final_vel]])
+            s_constraints = np.array([[self.init_pos], [self.init_vel], [self.final_pos], [self.final_vel]])
             time = np.array([[1, self.time_init, math.pow(self.time_init,2), math.pow(self.time_init,3)], [0, 1, 2*self.time_init, 3*math.pow(self.time_init,2)], [1, self.time_final, math.pow(self.time_final,2), math.pow(self.time_final,3)], [0, 1, 2*self.time_final, 3*math.pow(self.time_final,2)]])
             time_inv = np.linalg.inv(time)
             self.a = np.dot(time_inv, s_constraints)
@@ -187,7 +188,9 @@ class Controller:
 
     def __init__(self):
         rospy.init_node('controller', anonymous=False)
-        rate = rospy.Rate(ros_hertz)
+        rate = rospy.Rate(self.ros_hertz)
+
+        timer = 0
 
         rospy.Subscriber("wolf_control/goal", Twist, self.goal_callback)
         rospy.Subscriber("hardware_killswitch", Bool, self.armed_callback)
@@ -199,7 +202,7 @@ class Controller:
         depthPID = PIDController(0.37, 0.0, 0.0)
         yawPID = PIDController(-0.04, 0.00, 0.0, True)
         
-        yawLook = CubicTrajectory(0.0, 0.3, 0.0, 5.0, ros_hertz)
+        yawLook = CubicTrajectory(0.0, 0.3, 0.0, 5.0, self.ros_hertz)
         
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
