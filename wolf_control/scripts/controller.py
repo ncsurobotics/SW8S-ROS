@@ -36,7 +36,7 @@ class CubicTrajectory:
         self.controller_init_pos = init_pos
         self.controller_current_pos = init_pos
         self.controller_target_pos = tar_pos
-        self.direction = (self.controller_target_pos > self.controller_initial_pos)     #true if moving positively
+        self.direction = (self.controller_target_pos > self.controller_init_pos)     #true if moving positively
         
         self.controller_init_vel = 0.0
         self.controller_current_vel = 0.0
@@ -49,8 +49,8 @@ class CubicTrajectory:
         
         self.time_initial = t0
         self.time_final = tf
-        self.ros_hertz = ros_hz
-        self.samples = (self.time_final - self.time_init) * self.ros_hertz
+        self.freq = ros_hz
+        self.samples = (self.time_final - self.time_init) * self.freq
     
         s_constraints = np.array([[self.initial_pos], [self.initial_vel], [self.final_pos], [self.final_vel]])
         time = np.array([[1, self.time_init, math.pow(self.time_init,2), math.pow(self.time_init,3)], [0, 1, 2*self.time_init, 3*math.pow(self.time_init,2)], [1, self.time_final, math.pow(self.time_final,2), math.pow(self.time_final,3)], [0, 1, 2*self.time_final, 3*math.pow(self.time_final,2)]])
@@ -64,15 +64,15 @@ class CubicTrajectory:
             self.controller_init_pos = init_pos
         
         self.controller_target_pos = tar_pos
-        self.direction = (self.controller_target_pos > self.controller_initial_pos)     #true if moving positively
+        self.direction = (self.controller_target_pos > self.controller_init_pos)     #true if moving positively
         if ros_hz is not None:
-            ros_hertz = ros_hz
+            self.freq = ros_hz
         
         if t0 is not self.time_initial or tf is not self.time_final:
             self.time_initial = t0
             self.time_final = tf
-            self.ros_hertz = ros_hz
-            self.samples = (self.time_final - self.time_init) * self.ros_hertz
+            self.freq = ros_hz
+            self.samples = (self.time_final - self.time_init) * self.freq
         
             s_constraints = np.array([[self.initial_pos], [self.initial_vel], [self.final_pos], [self.final_vel]])
             time = np.array([[1, self.time_init, math.pow(self.time_init,2), math.pow(self.time_init,3)], [0, 1, 2*self.time_init, 3*math.pow(self.time_init,2)], [1, self.time_final, math.pow(self.time_final,2), math.pow(self.time_final,3)], [0, 1, 2*self.time_final, 3*math.pow(self.time_final,2)]])
@@ -81,7 +81,7 @@ class CubicTrajectory:
         
     
     def pos(self, timer):
-        rel_time = timer / self.ros_hertz 
+        rel_time = timer / self.freq 
         s = self.a[0,0] + (self.a[1,0] * rel_time) + (self.a[2,0] * math.pow(rel_time,2)) + (self.a[3,0] * math.pow(rel_time,3))
         self.controller_current_pos = (1-s) * self.controller_init_pos + s * self.controller_target_pos
         if self.direction:
@@ -92,7 +92,7 @@ class CubicTrajectory:
         return self.controller_current_pos
 
     def vel(self, timer):
-        rel_time = timer / self.ros_hertz 
+        rel_time = timer / self.freq 
         s = (self.a[1,0]) + (self.a[2,0] * rel_time) + (self.a[3,0] * math.pow(rel_time,2))
         self.controller_current_vel = (1-s) * self.controller_init_vel + s * self.controller_target_vel
         return self.controller_current_vel
@@ -199,7 +199,7 @@ class Controller:
         depthPID = PIDController(0.37, 0.0, 0.0)
         yawPID = PIDController(-0.04, 0.00, 0.0, True)
         
-        yawLook = cubicTrajectory(0.0, 0.3, 0.0, 5.0, ros_hertz)
+        yawLook = CubicTrajectory(0.0, 0.3, 0.0, 5.0, ros_hertz)
         
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
