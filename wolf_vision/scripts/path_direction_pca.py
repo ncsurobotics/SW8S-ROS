@@ -15,14 +15,15 @@ class path_direction:
 
     NOISE_PROPORTION = 0.005 # threshold of the area in image as path (less means it is noise)
     FORWARD_DEFAULT = [0,-1] # image up is forward
-    BACKGROUND_THRES = 8     # difference between background colors
-    
+    BACKGROUND_UP_THRES = 70    # difference between background color and path
+    BACKGROUND_LOW_THRES = 30    
+
     is_debug = False
     show_window = False
     focal_length = 381.36115
 
     def __init__(self):
-        self.img_prep = img_prep.ImagePrep(slice_size = 50)
+        self.img_prep = img_prep.ImagePrep(slice_size = 10)
         if self.is_debug:
             self.property_pub = rospy.Publisher("wolf_vision/path/properties", String, queue_size=10)
             self.final_pub = rospy.Publisher("wolf_camera2/image_final", Image, queue_size=10)
@@ -99,8 +100,8 @@ class path_direction:
                 kmeans[i][j], _ = self.img_prep.reduce_image_color(block)
             comb_row[i] = (self.img_prep.combineRow(kmeans[i]))
         combined_filter = self.img_prep.combineCol(comb_row)
-        combined_filter[:,:,1:3] = 0    # only blue channel is relevant (clear GR in BGR)
-        filter_final, colors = self.img_prep.reduce_image_color(combined_filter,2)  # reduce to 2 colors (background and path)
+        #combined_filter[:,:,1:3] = 0    # only blue channel is relevant (clear GR in BGR)
+        filter_final, colors = self.img_prep.reduce_image_color(combined_filter,3)  # reduce colors (background (black & white tiles) and path)
         gray = cv2.cvtColor(filter_final, cv2.COLOR_BGR2GRAY) 
 
         if self.show_window:
@@ -124,13 +125,18 @@ class path_direction:
                 self.property_pub.publish("no path (colors too similar)")
 
         img_size = sum(gray_counts)
+        background_color = gray_colors[np.argsort(gray_counts)[-1]]             # most common color
         gray_counts[gray_counts < img_size * self.NOISE_PROPORTION] = img_size       # mark noise color (takse too little of the image)
+        for i,color in enumerate(gray_colors):                                  # mark white and black tiles
+            if color < 60 or color > 200:
+                gray_counts[i] = img_size
         path_color = gray_colors[np.argsort(gray_counts)[0]]                                    # find the least common color
         path_size = gray_counts[np.argsort(gray_counts)[0]]
-        background_color = gray_colors[np.argsort(gray_counts)[1]]
 
         # simple threshold, use the least frequent color (which should not be the background)
         thres = np.uint8(np.where(gray == path_color, 255, 0)) # produce binary image for the path color found
+        thres = cv2.medianBlur(thres,11)                       # remove the edges
+
         input_shape = thres.shape
 
         # compute Principle Components
@@ -163,6 +169,8 @@ class path_direction:
         #bot_angle = self.compute_angle(self.FORWARD_DEFAULT, bot_dir)
         #top_angle = self.compute_angle(self.FORWARD_DEFAULT, top_dir)
         
+        # overall center
+        path_hori_cent, path_vert_cent = int(center1[0][0]), int(center1[1][0])
         # center of two segments (start location)
         bot_hori_cent, bot_vert_cent = int(path_center1[:,0][0]), int(path_center1[:,0][1])
         top_hori_cent, top_vert_cent = int(path_center2[:,0][0]), int(path_center2[:,0][1])
@@ -176,7 +184,7 @@ class path_direction:
         if self.property_pub:
             # these information might be useful for more complex logic as well
             # [path_color, background_color, theta, size, bot_location, top_location]
-            current_path_properties = [path_color, background_color, path_angle, path_size/img_size, bot_hori_cent, bot_vert_cent, top_hori_cent, top_vert_cent]
+            current_path_properties = [path_color, background_color, path_angle, path_size/img_size, path_hori_cent, path_vert_cent, bot_hori_cent, bot_vert_cent, top_hori_cent, top_vert_cent]
             self.property_pub.publish(str(current_path_properties))
 
         if self.show_window:
@@ -189,8 +197,9 @@ class path_direction:
         #   needs more logic and testing in simulation
         ####
 
+        color_diff = max(abs(gray_colors.astype(int) - int(path_color))) # largest difference between path and other colors
         # path found
-        if abs(gray_colors[0].astype(int) - gray_colors[1].astype(int)) > self.BACKGROUND_THRES:
+        if color_diff > self.BACKGROUND_LOW_THRES and color_diff < self.BACKGROUND_UP_THRES:
             
             turn_direction = top_hori_cent - bot_hori_cent
 
@@ -198,10 +207,10 @@ class path_direction:
             path_transform.header.stamp = rospy.Time.now()
             path_transform.header.frame_id = "base_link"
             path_transform.child_frame_id = "path"
-            # distance between top path and center, and normalized between [-0.25, 0.25]
+            # distance between path center and image center, and normalized between [-0.25, 0.25]
             # did NOT consider when the top part of path goes below the image center
-            path_transform.transform.translation.x = (top_vert_cent - height/2) / (2 * height)
-            path_transform.transform.translation.y = (top_hori_cent - width/2) / (2 * width)
+            path_transform.transform.translation.x = (path_vert_cent - height/2) / (2 * height)
+            path_transform.transform.translation.y = (path_hori_cent - width/2) / (2 * width)
             path_transform.transform.translation.z = 0.0
             path_transform.transform.rotation.x = 0
             path_transform.transform.rotation.y = 0
@@ -219,18 +228,18 @@ class path_direction:
             if self.show_window:
                 cv2.putText(frame, "found path", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,255,0))
 
-                if (top_hori_cent < width/2):        
-                    cv2.putText(frame, "move left (x pos): {loc}".format(loc = top_hori_cent),
+                if (path_hori_cent < width/2):        
+                    cv2.putText(frame, "move left (x pos): {loc}".format(loc = path_hori_cent),
                                 (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
                 else:
-                    cv2.putText(frame, "move right(x pos): {loc}".format(loc = top_hori_cent),
+                    cv2.putText(frame, "move right(x pos): {loc}".format(loc = path_hori_cent),
                                 (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
 
                 if (turn_direction > 0):
-                    cv2.putText(frame, "rotate right(turn mag): {theta}".format(theta = path_angle),
+                    cv2.putText(frame, "rotate right(turn rad): {theta}".format(theta = path_angle),
                                 (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
                 else:
-                    cv2.putText(frame, "rotate left(turn mag): {theta}".format(theta = path_angle),
+                    cv2.putText(frame, "rotate left(turn rad): {theta}".format(theta = -path_angle),
                                 (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
                 cv2.imshow('final', frame)
         # no path found
