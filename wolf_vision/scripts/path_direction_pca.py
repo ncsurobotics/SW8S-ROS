@@ -13,13 +13,18 @@ import tf2_ros
 import img_prep
 
 class path_direction:
-    SCALING_FACTOR = 0.5
+    SCALING_FACTOR = 0.5    # rescaling the image
 
     NOISE_PROPORTION = 0.005 # threshold of the area in image as path (less means it is noise)
     FORWARD_DEFAULT = [0,-1] # image up is forward
     # thresholds for tuning
+    # check the grayscale image window for color thresholds
+    # check the output image window for width thresholds
     PATH_COLOR_LOW_THRES, PATH_COLOR_UP_THRES = 65, 90
     PATH_WIDTH_LOW_THRES, PATH_WIDTH_UP_THRES = 70, 600      # between means it is path
+    # depending on the situation in the pool
+    # the goal is to make path color separate from others in kmeans
+    # lower is better, as long as path color is distinct in grayscale image window
     NUM_OF_COLORS = 4
 
     is_debug = False
