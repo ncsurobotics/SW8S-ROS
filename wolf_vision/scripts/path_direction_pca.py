@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from TesterCodes.OpenCV.PathProject.path_direction import FORWARD_DEFAULT
+from TesterCodes.OpenCV.PathProject.path_direction_video import NUM_OF_COLORS
 import rospy
 import cv2
 import numpy as np
@@ -15,15 +17,17 @@ class path_direction:
 
     NOISE_PROPORTION = 0.005 # threshold of the area in image as path (less means it is noise)
     FORWARD_DEFAULT = [0,-1] # image up is forward
-    BACKGROUND_UP_THRES = 70    # difference between background color and path
-    BACKGROUND_LOW_THRES = 30    
+    # thresholds for tuning
+    PATH_COLOR_LOW_THRES, PATH_COLOR_UP_THRES = 65, 90
+    PATH_WIDTH_LOW_THRES, PATH_WIDTH_UP_THRES = 70, 600      # between means it is path
+    NUM_OF_COLORS = 4
 
     is_debug = False
     show_window = False
     focal_length = 381.36115
 
     def __init__(self):
-        self.img_prep = img_prep.ImagePrep(slice_size = 10)
+        self.img_prep = img_prep.ImagePrep(slice_size = 25)
         if self.is_debug:
             self.property_pub = rospy.Publisher("wolf_vision/path/properties", String, queue_size=10)
             self.final_pub = rospy.Publisher("wolf_camera2/image_final", Image, queue_size=10)
@@ -90,18 +94,19 @@ class path_direction:
         width = int(frame.shape[1] * self.SCALING_FACTOR)
         height = int(frame.shape[0] * self.SCALING_FACTOR)
         frame = cv2.resize(frame, (width, height))
-        
+        # blur to remove grid on black tiles
+        frame = cv2.medianBlur(frame, 3)
         #simplify image colors
         slice_imgs = self.img_prep.slice(frame)
         kmeans = slice_imgs.copy()
         comb_row = [i for i in range(len(slice_imgs))]
         for i,row in enumerate(slice_imgs):
             for j,block in enumerate(row):
-                kmeans[i][j], _ = self.img_prep.reduce_image_color(block)
+                kmeans[i][j], _ = self.img_prep.reduce_image_color(block, 2)
             comb_row[i] = (self.img_prep.combineRow(kmeans[i]))
         combined_filter = self.img_prep.combineCol(comb_row)
         #combined_filter[:,:,1:3] = 0    # only blue channel is relevant (clear GR in BGR)
-        filter_final, colors = self.img_prep.reduce_image_color(combined_filter,3)  # reduce colors (background (black & white tiles) and path)
+        filter_final, colors = self.img_prep.reduce_image_color(combined_filter, NUM_OF_COLORS)  # reduce colors (background (black & white tiles, waves, random stuff) and path)
         gray = cv2.cvtColor(filter_final, cv2.COLOR_BGR2GRAY) 
 
         if self.show_window:
@@ -118,30 +123,38 @@ class path_direction:
         if len(gray_colors) < 2:
             if self.is_debug:
                 self.property_pub.publish("no path in image (only one color)")
-            return  # need to stop the rest of the code
-
-        if abs(gray_colors[0].astype(int) - gray_colors[1].astype(int)) < self.BACKGROUND_THRES:
-            if self.is_debug:
-                self.property_pub.publish("no path (colors too similar)")
+            return  # need to stop the current callback
 
         img_size = sum(gray_counts)
         background_color = gray_colors[np.argsort(gray_counts)[-1]]             # most common color
         gray_counts[gray_counts < img_size * self.NOISE_PROPORTION] = img_size       # mark noise color (takse too little of the image)
         for i,color in enumerate(gray_colors):                                  # mark white and black tiles
-            if color < 60 or color > 200:
+            if color < self.PATH_COLOR_LOW_THRES or color > self.PATH_COLOR_UP_THRES:
                 gray_counts[i] = img_size
         path_color = gray_colors[np.argsort(gray_counts)[0]]                                    # find the least common color
         path_size = gray_counts[np.argsort(gray_counts)[0]]
 
         # simple threshold, use the least frequent color (which should not be the background)
         thres = np.uint8(np.where(gray == path_color, 255, 0)) # produce binary image for the path color found
-        thres = cv2.medianBlur(thres,11)                       # remove the edges
+        #thres = cv2.medianBlur(thres,31)                       # remove the edges
 
         input_shape = thres.shape
 
         # compute Principle Components
         # to find line between two paths
         center1, pca_vector_1, pca_val = self.Path_PCA(thres)
+        
+        # check the orientation with overall PCA
+        # drawn as red and green arrows if show_window is enabled
+        first_pass_path_vector = pca_vector_1[:,np.argmax(pca_val)]
+        first_pass_path_variance = pca_vector_1[:,np.argmin(pca_val)]
+        if first_pass_path_vector[1] > 0:
+            first_pass_path_vector = -first_pass_path_vector
+        
+        # if this angle is desirable output (not necessary since there is another method)
+        # might be useful to compare the two in very unusual situations
+        #first_pass_path_angle = self.compute_angle(FORWARD_DEFAULT, first_pass_path_vector)
+
         slice_dir = np.argmin(pca_val)  # slice the path using PC2
         # Create the masks to separate two paths
         mask_one = np.ones(input_shape, dtype="uint8")                                   # generate mask
@@ -186,10 +199,14 @@ class path_direction:
             # [path_color, background_color, theta, size, bot_location, top_location]
             current_path_properties = [path_color, background_color, path_angle, path_size/img_size, path_hori_cent, path_vert_cent, bot_hori_cent, bot_vert_cent, top_hori_cent, top_vert_cent]
             self.property_pub.publish(str(current_path_properties))
-
+        
         if self.show_window:
-            cv2.arrowedLine(frame,(bot_hori_cent, bot_vert_cent),(top_hori_cent, top_vert_cent),
-                            color=(255,255,255),thickness=2,tipLength=0.2)
+            first_pass_end_location = self.compute_location((path_hori_cent, path_vert_cent), first_pass_path_vector,scale= np.max(pca_val)/np.sum(pca_val)*30)
+            first_pass_variance_end_location = self.compute_location((path_hori_cent, path_vert_cent), first_pass_path_variance, scale = np.min(pca_val)/np.sum(pca_val)*30)
+            cv2.arrowedLine(frame,(path_hori_cent, path_vert_cent),first_pass_end_location,
+                            color=(0,0,255),thickness=1,tipLength=0.2)
+            cv2.arrowedLine(frame,(path_hori_cent, path_vert_cent),first_pass_variance_end_location,
+                            color=(0,255,0),thickness=1,tipLength=0.2)
         
         ####
         #   determine movement of the robot
@@ -197,9 +214,9 @@ class path_direction:
         #   needs more logic and testing in simulation
         ####
 
-        color_diff = max(abs(gray_colors.astype(int) - int(path_color))) # largest difference between path and other colors
+        path_width = np.min(pca_val)
         # path found
-        if color_diff > self.BACKGROUND_LOW_THRES and color_diff < self.BACKGROUND_UP_THRES:
+        if path_width > self.PATH_COLOR_LOW_THRES and path_width < self.PATH_WIDTH_UP_THRES and path_color > self.PATH_COLOR_LOW_THRES and path_color < self.PATH_COLOR_UP_THRES:
             
             turn_direction = top_hori_cent - bot_hori_cent
 
@@ -226,24 +243,31 @@ class path_direction:
             tf2_ros.TransformBroadcaster().sendTransform(path_transform)
 
             if self.show_window:
-                cv2.putText(frame, "found path", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,255,0))
+                cv2.arrowedLine(frame,(bot_hori_cent, bot_vert_cent),(top_hori_cent, top_vert_cent),
+                            color=(255,255,255),thickness=2,tipLength=0.2)
+
+                cv2.putText(frame, "found path:", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,255,0))
+                cv2.putText(frame, "color: {diff}    width: {var:.2f}".format(diff = path_color, var = path_width), (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,255,0))
+                cv2.arrowedLine(frame,(bot_hori_cent, bot_vert_cent),(top_hori_cent, top_vert_cent),
+                        color=(255,255,255),thickness=2,tipLength=0.2)
 
                 if (path_hori_cent < width/2):        
                     cv2.putText(frame, "move left (x pos): {loc}".format(loc = path_hori_cent),
-                                (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
+                                (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
                 else:
                     cv2.putText(frame, "move right(x pos): {loc}".format(loc = path_hori_cent),
-                                (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
+                                (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
 
                 if (turn_direction > 0):
                     cv2.putText(frame, "rotate right(turn rad): {theta}".format(theta = path_angle),
-                                (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
+                                (0,80), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
                 else:
                     cv2.putText(frame, "rotate left(turn rad): {theta}".format(theta = -path_angle),
-                                (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
+                                (0,80), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
                 cv2.imshow('final', frame)
         # no path found
         else:
             if self.show_window:
                 cv2.putText(frame, "no path", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,0,255))
+                cv2.putText(frame, "color: {diff}    width: {var:.2f}".format(diff = path_color, var = path_width), (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,0,255))
                 cv2.imshow('final', frame)
