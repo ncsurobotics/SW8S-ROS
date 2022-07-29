@@ -19,6 +19,7 @@ def forwarder(file_name):
     size = (frame_width, frame_height)
 
     image_pub = rospy.Publisher('wolf_camera1/image_raw', Image, queue_size=10)
+    image_pub_2 = rospy.Publisher('wolf_camera2/image_raw', Image, queue_size=10)
     writer = cv2.VideoWriter('test' + str(time.time()) + '.avi', 
                          cv2.VideoWriter_fourcc(*'MJPG'),
                          10, size)
@@ -33,6 +34,7 @@ def forwarder(file_name):
         writer.write(final)
 
         image_pub.publish(bridge.cv2_to_imgmsg(final, "bgr8"))
+        image_pub_2.publish(bridge.cv2_to_imgmsg(final, "bgr8"))
         rate.sleep()
 
 if __name__ == '__main__':
