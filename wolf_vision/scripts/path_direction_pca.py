@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-from TesterCodes.OpenCV.PathProject.path_direction import FORWARD_DEFAULT
-from TesterCodes.OpenCV.PathProject.path_direction_video import NUM_OF_COLORS
+
 import rospy
 import cv2
 import numpy as np
@@ -20,15 +19,15 @@ class path_direction:
     # thresholds for tuning
     # check the grayscale image window for color thresholds
     # check the output image window for width thresholds
-    PATH_COLOR_LOW_THRES, PATH_COLOR_UP_THRES = 65, 90
-    PATH_WIDTH_LOW_THRES, PATH_WIDTH_UP_THRES = 70, 600      # between means it is path
+    PATH_COLOR_LOW_THRES, PATH_COLOR_UP_THRES = 60, 85
+    PATH_WIDTH_LOW_THRES, PATH_WIDTH_UP_THRES = 70, 400      # between means it is path
     # depending on the situation in the pool
     # the goal is to make path color separate from others in kmeans
     # lower is better, as long as path color is distinct in grayscale image window
     NUM_OF_COLORS = 4
 
     is_debug = False
-    show_window = False
+    show_window = True
     focal_length = 381.36115
 
     def __init__(self):
@@ -100,7 +99,7 @@ class path_direction:
         height = int(frame.shape[0] * self.SCALING_FACTOR)
         frame = cv2.resize(frame, (width, height))
         # blur to remove grid on black tiles
-        frame = cv2.medianBlur(frame, 3)
+        frame = cv2.medianBlur(frame, 5)
         #simplify image colors
         slice_imgs = self.img_prep.slice(frame)
         kmeans = slice_imgs.copy()
@@ -111,7 +110,7 @@ class path_direction:
             comb_row[i] = (self.img_prep.combineRow(kmeans[i]))
         combined_filter = self.img_prep.combineCol(comb_row)
         #combined_filter[:,:,1:3] = 0    # only blue channel is relevant (clear GR in BGR)
-        filter_final, colors = self.img_prep.reduce_image_color(combined_filter, NUM_OF_COLORS)  # reduce colors (background (black & white tiles, waves, random stuff) and path)
+        filter_final, colors = self.img_prep.reduce_image_color(combined_filter, self.NUM_OF_COLORS)  # reduce colors (background (black & white tiles, waves, random stuff) and path)
         gray = cv2.cvtColor(filter_final, cv2.COLOR_BGR2GRAY) 
 
         if self.show_window:
@@ -133,10 +132,17 @@ class path_direction:
         img_size = sum(gray_counts)
         background_color = gray_colors[np.argsort(gray_counts)[-1]]             # most common color
         gray_counts[gray_counts < img_size * self.NOISE_PROPORTION] = img_size       # mark noise color (takse too little of the image)
+        out_of_thresh = 0
         for i,color in enumerate(gray_colors):                                  # mark white and black tiles
             if color < self.PATH_COLOR_LOW_THRES or color > self.PATH_COLOR_UP_THRES:
                 gray_counts[i] = img_size
+                out_of_thresh += 1
+        
         path_color = gray_colors[np.argsort(gray_counts)[0]]                                    # find the least common color
+        # if all colors are outside of the thresholds, pick the closest one
+        if out_of_thresh == self.NUM_OF_COLORS:
+            closest_color_i = np.argmin(np.abs(gray_colors - (self.PATH_COLOR_LOW_THRES + self.PATH_COLOR_UP_THRES)/2))
+            path_color = gray_colors[closest_color_i]
         path_size = gray_counts[np.argsort(gray_counts)[0]]
 
         # simple threshold, use the least frequent color (which should not be the background)
@@ -199,7 +205,7 @@ class path_direction:
         path_direction = self.compute_slope((bot_hori_cent, bot_vert_cent),(top_hori_cent, top_vert_cent))
         path_angle = self.compute_angle(self.FORWARD_DEFAULT,path_direction)
 
-        if self.property_pub:
+        if self.is_debug:
             # these information might be useful for more complex logic as well
             # [path_color, background_color, theta, size, bot_location, top_location]
             current_path_properties = [path_color, background_color, path_angle, path_size/img_size, path_hori_cent, path_vert_cent, bot_hori_cent, bot_vert_cent, top_hori_cent, top_vert_cent]
@@ -257,10 +263,10 @@ class path_direction:
                         color=(255,255,255),thickness=2,tipLength=0.2)
 
                 if (path_hori_cent < width/2):        
-                    cv2.putText(frame, "move left (x pos): {loc}".format(loc = path_hori_cent),
+                    cv2.putText(frame, "move left (x offset): {loc}".format(loc = path_hori_cent - width/2),
                                 (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
                 else:
-                    cv2.putText(frame, "move right(x pos): {loc}".format(loc = path_hori_cent),
+                    cv2.putText(frame, "move right(x offset): {loc}".format(loc = path_hori_cent - width/2),
                                 (0,60), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
 
                 if (turn_direction > 0):
@@ -276,3 +282,12 @@ class path_direction:
                 cv2.putText(frame, "no path", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,0,255))
                 cv2.putText(frame, "color: {diff}    width: {var:.2f}".format(diff = path_color, var = path_width), (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,0,255))
                 cv2.imshow('final', frame)
+
+if __name__ == '__main__':
+    rospy.init_node('path_detector', anonymous=True)
+    detector = path_direction()
+    try:
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("stopping path vision")
+    cv2.destroyAllWindows()
