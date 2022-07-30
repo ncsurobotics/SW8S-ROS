@@ -114,9 +114,7 @@ class path_direction:
         gray = cv2.cvtColor(filter_final, cv2.COLOR_BGR2GRAY) 
 
         if self.show_window:
-            cv2.imshow('original', frame)
-            cv2.imshow('testslice',filter_final)
-            cv2.imshow('gray',gray)
+            display_left = self.img_prep.combineCol([filter_final, cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)])
             cv2.waitKey(10)
         ####
         #   Find Path Directions
@@ -177,9 +175,8 @@ class path_direction:
         top_path = cv2.bitwise_and(thres,thres,mask=mask_two)
 
         if self.show_window:
-            cv2.imshow('mask1_path',bottom_path)
-            cv2.imshow('mask2_path',top_path)
-
+            display_middle = self.img_prep.combineCol([cv2.cvtColor(top_path, cv2.COLOR_GRAY2BGR), cv2.cvtColor(bottom_path, cv2.COLOR_GRAY2BGR)])
+            display_right = cv2.cvtColor(cv2.bitwise_or(top_path, bottom_path), cv2.COLOR_GRAY2BGR)
         # Compute Principle Components for both path segments (center point(mean), direction vector(eigvec), variance vector(eigval))
         path_center1, path_direction1, pca_val1 = self.Path_PCA(bottom_path)
         path_center2, path_direction2, pca_val2 = self.Path_PCA(top_path)
@@ -275,13 +272,17 @@ class path_direction:
                 else:
                     cv2.putText(frame, "rotate left(turn rad): {theta}".format(theta = -path_angle),
                                 (0,80), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255,255,255))
-                cv2.imshow('final', frame)
+                display_right = self.img_prep.combineCol([display_right, frame])
+                display_overall = self.img_prep.combineRow([display_left, display_middle, display_right])
+                cv2.imshow("path",display_overall)
         # no path found
         else:
             if self.show_window:
                 cv2.putText(frame, "no path", (0,20), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,0,255))
                 cv2.putText(frame, "color: {diff}    width: {var:.2f}".format(diff = path_color, var = path_width), (0,40), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0,0,255))
-                cv2.imshow('final', frame)
+                display_right = self.img_prep.combineCol([display_right, frame])
+                display_overall = self.img_prep.combineRow([display_left, display_middle, display_right])
+                cv2.imshow("path",display_overall)
 
 if __name__ == '__main__':
     rospy.init_node('path_detector', anonymous=True)
